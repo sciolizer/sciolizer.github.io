@@ -13,7 +13,7 @@ As before, our game is the children's "Guess a number between 1 and 100" game:
 
 I like this version much better because the ugly wart of before:
 
-``` python The trouble with calling a generator from a generator
+``` python
 # The coroutine equivalent of self.__play_game()
 iter = self.__play_game()
 try:
@@ -26,13 +26,13 @@ except StopIteration:
 
 has been simplified to:
 
-``` python Regular method invocation
+``` python
 self.__play_game()
 ```
 
 The interface between the game and the user interface is the same as before, with one addition:
 
-``` python Interface
+``` python
 display(text)       # displays the given text to the user and returns None
 prompt_string(text) # displays the given text to the user and returns a string input by the user
 prompt_int(text)    # display the given text to the user and returns an int input by the user
@@ -43,7 +43,7 @@ get(callback)       # invokes the callback and returns what it returns
 
 The new method "get" is made use of in the game when generating the answer for the game:
 
-``` python Get usage
+``` python
 my_number = self.interface.get(lambda: rgen.randint(1,100))
 ```
 

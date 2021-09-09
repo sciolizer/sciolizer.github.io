@@ -12,7 +12,7 @@ I think it is safe to say that the programming language of the future, if it
 exists at all, will involve some kind of artificial intelligence. This post
 is about why I think that theorem provers will be standard in languages of the future.
 
-``` haskell The hundred year function
+``` haskell
 solve :: (a -> Bool) -> Size -> Random (Maybe a)
 ```
 
@@ -36,7 +36,7 @@ Why it matters
 
 It can find fix-points:
 
-``` python "Put down fahrenheit," said the explorer. "I don't expect it to matter."
+``` python
 def c2f(temp):
   return temp * 9.0 / 5 + 32
 
@@ -48,7 +48,7 @@ print solve(is_fixpoint, 8) # outputs -40.0
 
 It can invert functions:
 
-``` python Crazy Canadians think 37 is hot.
+``` python
 def f2c(temp):
   return (temp - 32) * 5 / 9.0
 
@@ -57,7 +57,7 @@ print solve(lambda fahr: 37.0 == f2c(fahr), 8) # 100.0 IS hot!
 
 It can solve [Project Euler](http://projecteuler.net/problem=9) problems:
 
-``` python Problem 9
+``` python
 def is_pythagorean_triple(a, b, c):
   return a*a + b*b == c*c
 
@@ -72,7 +72,7 @@ print solve(is_solution, 12)
 
 It can check that two functions are equal:
 
-``` python Programming interviews exposed
+``` python
 def the_obvious_max_subarray(A):
   answer = 0
   for start in range(0, len(A) - 1):
@@ -100,7 +100,7 @@ So it's useful for detecting the introduction of bugs when you are optimizing th
 
 In fact, the solve function can find a more efficient implementation on your behalf.
 
-``` python My computer is smarter than Kadane, if you'll just be patient.
+``` python
 def steps(algorithm, input):
   (_result, steps) = eval_with_steps(algorithm, input)
   return steps
@@ -127,7 +127,7 @@ mapping inputs to outputs.
 programs and proofs are one and the same thing. If our `solve` function can generate programs, then it
 can also generate mathematical proofs.
 
-``` python Ten years too late for Uncle Petros
+``` python
 goldbach = parse("forall a > 2: exists b c: even(a) => prime(b) && prime(c) && b + c == a")
 
 def proves_goldbach(proof):
@@ -146,7 +146,7 @@ more elegant proof.
 
 The `solve` function can find bugs:
 
-``` python Like fuzz testing, but more exhaustive
+``` python
 def does_not_go_wrong(input):
   result = eval(my_program, input)
   return not is_uncaught_exception(result)
@@ -162,7 +162,7 @@ One last example:
 Test-driven development advocates writing tests which are sufficient to construct the missing
 parts of a program. So why write the program at all?
 
-``` python Beck's revenge
+``` python
 def passes_tests(patches):
   return unit_tests.pass(partial_program.with(patches))
 
@@ -184,7 +184,7 @@ Implementation
 
 Always start with the obvious approach:
 
-``` python Exhaustive search
+``` python
 def solve(predicate, size):
   for num in range(0, 2 ^ (size * 8) - 1):
     val = decode(num)
@@ -240,7 +240,7 @@ be more intelligent.
 We can get rid of these problems if we compile our predicate directly into a boolean formula.
 Compilation is easy enough if our predicate contains neither loops nor conditionals.
 
-``` python An example without loops or branches
+``` python
 def isReadableAndWriteable(x):
   y = x & 4
   z = x & 2
@@ -251,7 +251,7 @@ def isReadableAndWriteable(x):
 
 becomes
 
-``` haskell The sat formula, assuming 3-bit values.
+``` haskell
 (y0 == x0 & 0) & (y1 == x1 & 0) & (y2 == x2 & 1) &
 (z0 == x0 & 0) & (z1 == x1 & 1) & (z2 == x2 & 0) &
 (a == ((y0 == 0) & (y1 == 0) & (y2 == 1)) &
@@ -261,7 +261,7 @@ a && b
 
 Actually conditionals aren't that hard either
 
-``` python A contrived branching example
+``` python
 def predicate(x):
   b = isEven(x)
   if b:
@@ -274,7 +274,7 @@ def predicate(x):
 
 becomes
 
-``` haskell The sat formula, again assuming 3-bit values.
+``` haskell
 (b == (x0 == 0)) &
 (b -> ((w0 == (x0 & 1)) & (w1 == (x1 & 1)) & (w2 == (x2 & 1)))) &
 (~b -> ((z0 == (x0 & 0)) & (z1 == (x1 & 1)) & (z2 == (x2 & 0)))) &
@@ -290,7 +290,7 @@ By compiling the predicate, we have enabled the solver to work from end to begin
 
 Can we handle loops?
 
-``` python A six is a
+``` python
 def is_palindrome(str):
   i = 0
   j = len(str) - 1
@@ -303,7 +303,7 @@ def is_palindrome(str):
 
 One approach is to unroll the loop a finite number of times.
 
-``` python A six is a six is a six is a
+``` python
 def is_palindrome(str):
   i = 0
   j = len(str) - 1
@@ -334,7 +334,7 @@ introduce symmetry into our sat formulas, but at least it will be contained.
 When solving, we assume the loops make very few iterations, and increase our unroll depth as
 that assumption is violated. The solver might then look something like this:
 
-``` python Solver for a predicate with one loop
+``` python
 def solve(predicate, size):
   unroll_count = 1
   sat_solver = SatSolver()

@@ -19,7 +19,7 @@ Essentially, all read and write actions with the outside world have been replace
 
 All we need now is an interface that implements the following methods:
 
-``` python Interface
+``` python
 # displays the given text to the user and returns None
 interface.display(text)
 
