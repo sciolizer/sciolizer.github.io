@@ -33,6 +33,9 @@ github_username:  jekyll
 theme: minima
 plugins:
   - jekyll-feed
+  - pygments.rb
+
+code_dir: downloads/code
 
 # Exclude from processing.
 # The following items will not be processed, by default.
