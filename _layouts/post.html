@@ -23,3 +23,53 @@ layout: default
   {% endif %}
 
 </article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+</style>
+<ul class="pager">
+    {% if page.previous.url %}
+    <li class="previous">
+        <a href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}" data-toggle="tooltip"
+            data-placement="top" title="{{page.previous.title}}">&larr; Previous Post</a>
+    </li>
+    {% endif %}
+    {% if page.next.url %}
+    <li class="next">
+        <a href="{{ page.next.url | prepend: site.baseurl | replace: '//', '/' }}" data-toggle="tooltip"
+            data-placement="top" title="{{page.next.title}}">Next Post &rarr;</a>
+    </li>
+    {% endif %}
+</ul>
