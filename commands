@@ -1,0 +1,25 @@
+new post: just copy paste
+
+categories can be a word, or a list of words, e.g.
+
+categories: Sass
+
+or
+
+categories: [CSS3, Sass, Media Queries]
+
+or
+
+categories:
+- CSS3
+- Sass
+- Media Queries
+
+to read locally:
+
+bundle exec jekyll serve # port 4000
+
+to publish:
+
+bundle exec jekyll build # not necessary if you've been using `serve`
+./rsync.sh
