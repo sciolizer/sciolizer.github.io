@@ -23,8 +23,6 @@ So the obvious place to start is reducing my time spent debugging. The best way 
 3. Writing code in short, quick iterations instead of large batches
 4. Writing unit tests
 
-(To the weenies who are angry at me for putting unit tests at the bottom: it's only because I hit the point of diminishing returns once I've applied the other approaches. I found writing unit tests in ruby to be *enormously* helpful, because ruby is neither statically typed nor does it have smart editors. But when I'm writing scala in IntelliJ, the type system and the editor catch *so many* of my bugs that there's usually nothing left for the unit tests to find. I still write unit tests, but they provide more value in discovering regressions than in discovering bugs the first time around.)
-
 Despite using all these approaches, debugging *still* takes up more of my time than the actual writing of the code. The only exception has been haskell, but I don't use haskell at work.
 
 My approaches are fairly standard, but a few days ago I discovered an approach that I haven't heard described elsewhere. I was practicing the habit of "noticing when I'm surprised". Being frequently surprised is bad because it means I'm not learning. I noticed that sometimes when I ran my programs, they did not behave the way I expected. i.e. I was surprised.
