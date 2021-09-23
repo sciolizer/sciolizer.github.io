@@ -5,7 +5,10 @@ date: 2008-10-04 11:01
 comments: true
 categories: [continuation,exception,python,separation of concern]
 ---
-A friend has pointed out to me that the command line and web interface in my [last post](/blog/2008/09/15/de-coupling-interfaces-with-yield-lambda/) do not need to interact with the main game through an iterator. He proposed that the web interface could pause the execution of the game by using exceptions. I played with the idea, and discovered that he was right. The upshot is that continuation-based web serving can be faked in any language which has exceptions. (Lexical closures are also helpful, but can also be faked using objects.) The approach given below relies on neither CPS nor monads, and so has the added advantage of being fairly idiomatic in most mainstream languages.
+A friend has pointed out to me that the command line and web interface in my
+[last post]({% post_url 2008-09-15-de-coupling-interfaces-with-yield-lambda %})
+do not need to interact with
+the main game through an iterator. He proposed that the web interface could pause the execution of the game by using exceptions. I played with the idea, and discovered that he was right. The upshot is that continuation-based web serving can be faked in any language which has exceptions. (Lexical closures are also helpful, but can also be faked using objects.) The approach given below relies on neither CPS nor monads, and so has the added advantage of being fairly idiomatic in most mainstream languages.
 
 As before, our game is the children's "Guess a number between 1 and 100" game:
 
