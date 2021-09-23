@@ -58,6 +58,23 @@ layout: default
 .pager .next > a {
     float: right;
 }
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
 </style>
 <ul class="pager">
     {% if page.previous.url %}
