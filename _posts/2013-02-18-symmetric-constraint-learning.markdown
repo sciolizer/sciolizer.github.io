@@ -48,6 +48,15 @@ in the solver's collection of learned constraints. The hard part is figuring out
 
 Has this problem already been tackled?
 
-
 Original post:
 [https://www.reddit.com/r/artificial/comments/18rttb/symmetric_constraint_learning/](https://www.reddit.com/r/artificial/comments/18rttb/symmetric_constraint_learning/)
+
+Update (2018/04/04):
+
+[ZAP][2] appears to do
+this.
+
+Also [Implementing a Generalized Version of Resolution][1]
+
+[1]: http://www.aaai.org/Papers/AAAI/2004/AAAI04-009.pdf
+[2]: https://www.cs.cmu.edu/afs/cs/project/jair/pub/volume21/dixon04a-html/node1.html
