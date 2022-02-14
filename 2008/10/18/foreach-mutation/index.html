@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Foreach mutation</title>
+  <meta name="description" content="Many languages have adopted some form of the “foreach” keyword, for traversing elements of a collection. The advantages are obvious: fencepost errors are impossible, and programs are easier to read. Foreach loops are not places where I expect to find bugs. But about a month ago, I found one, in a piece of code similar to the code below. The expected behavior of the program is to print out the numbers zero and one, on separate lines. Do not read past the end of the program if you want to find the bug yourself, because I explain it below.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2008/10/18/foreach-mutation/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Foreach mutation">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2008/10/18/foreach-mutation/">
+  <meta property="og:description" content="Many languages have adopted some form of the “foreach” keyword, for traversing elements of a collection. The advantages are obvious: fencepost errors are impossible, and programs are easier to read. Foreach loops are not places where I expect to find bugs. But about a month ago, I found one, in a piece of code similar to the code below. The expected behavior of the program is to print out the numbers zero and one, on separate lines. Do not read past the end of the program if you want to find the bug yourself, because I explain it below.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Foreach mutation">
+  <meta name="twitter:description" content="Many languages have adopted some form of the “foreach” keyword, for traversing elements of a collection. The advantages are obvious: fencepost errors are impossible, and programs are easier to read...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Foreach mutation</h1>
+    
+    <p class="post-meta"><time datetime="2008-10-18T11:12:00-07:00" itemprop="datePublished">Oct 18, 2008</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/binding/">binding</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/foreach/">foreach</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/lexical-closures/">lexical closures</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>Many languages have adopted some form of the “foreach” keyword, for traversing elements of a collection. The advantages are obvious: fencepost errors are impossible, and programs are easier to read. Foreach loops are not places where I expect to find bugs. But about a month ago, I found one, in a piece of code similar to the code below. The expected behavior of the program is to print out the numbers zero and one, on separate lines. Do not read past the end of the program if you want to find the bug yourself, because I explain it below.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach.py)</span> <a href="/downloads/code/foreach-mutation/foreach.py">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+</pre></td><td class="code"><pre><code class="py"><span class="line"><span></span><span class="n">nums</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+</span><span class="line"><span class="n">numclosures</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span class="line"><span class="k">for</span> <span class="n">num</span> <span class="ow">in</span> <span class="n">nums</span><span class="p">:</span>
+</span><span class="line">    <span class="n">numclosures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">num</span><span class="p">)</span>
+</span><span class="line"><span class="k">for</span> <span class="n">numclosure</span> <span class="ow">in</span> <span class="n">numclosures</span><span class="p">:</span>
+</span><span class="line">    <span class="nb">print</span> <span class="n">numclosure</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line"><span class="c1"># output from Python 2.5.2</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>The solution has to do with the implementation of the for loop in python. (I ran the program in cpython; it may be interesting to see what other implementations of python do.) Rather than creating a new binding for the num variable on every iteration of the loop, the num variable is mutated (probably for efficiency or just simplicity of implementation). Thus, even though numclosures is filled with distinct anonymous functions, they both refer to the same instance of num.</p>
+
+<p>I tried writing similar routines in other languages. Ruby and C# do the same thing as Python:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach.rb)</span> <a href="/downloads/code/foreach-mutation/foreach.rb">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+</pre></td><td class="code"><pre><code class="rb"><span class="line"><span></span><span class="n">nums</span> <span class="o">=</span> <span class="nb">Array</span><span class="o">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">]</span>
+</span><span class="line"><span class="n">numclosures</span> <span class="o">=</span> <span class="nb">Array</span><span class="o">.</span><span class="n">new</span>
+</span><span class="line"><span class="k">for</span> <span class="n">num</span> <span class="k">in</span> <span class="n">nums</span>
+</span><span class="line">    <span class="n">numclosures</span><span class="o">.</span><span class="n">push</span> <span class="nb">lambda</span> <span class="p">{</span> <span class="k">return</span> <span class="n">num</span> <span class="p">}</span>
+</span><span class="line"><span class="k">end</span>
+</span><span class="line"><span class="k">for</span> <span class="n">numclosure</span> <span class="k">in</span> <span class="n">numclosures</span>
+</span><span class="line">    <span class="nb">print</span> <span class="n">numclosure</span><span class="o">.</span><span class="n">call</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span class="line"><span class="k">end</span>
+</span><span class="line">
+</span><span class="line"><span class="c1"># output from Ruby1.8</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach.cs)</span> <a href="/downloads/code/foreach-mutation/foreach.cs">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+</pre></td><td class="code"><pre><code class="csharp"><span class="line"><span></span><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+</span><span class="line"><span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line"><span class="k">public</span> <span class="k">static</span> <span class="k">class</span> <span class="nc">Foreach</span>
+</span><span class="line"><span class="p">{</span>
+</span><span class="line">    <span class="k">public</span> <span class="k">delegate</span> <span class="kt">int</span> <span class="nf">NumClosure</span><span class="p">();</span> <span class="c1">// Func&lt;int&gt; does not exist in the latest Mono???</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">Main</span><span class="p">()</span>
+</span><span class="line">    <span class="p">{</span>
+</span><span class="line">        <span class="kt">int</span><span class="p">[]</span> <span class="n">nums</span> <span class="p">=</span> <span class="k">new</span> <span class="kt">int</span><span class="p">[]</span> <span class="p">{</span> <span class="m">0</span><span class="p">,</span> <span class="m">1</span> <span class="p">};</span>
+</span><span class="line">        <span class="n">List</span><span class="p">&lt;</span><span class="n">NumClosure</span><span class="p">&gt;</span> <span class="n">numclosures</span> <span class="p">=</span> <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">NumClosure</span><span class="p">&gt;();</span>
+</span><span class="line">        <span class="k">foreach</span> <span class="p">(</span><span class="kt">int</span> <span class="n">num</span> <span class="k">in</span> <span class="n">nums</span><span class="p">)</span>
+</span><span class="line">        <span class="p">{</span>
+</span><span class="line">            <span class="n">numclosures</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="k">delegate</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">num</span><span class="p">;</span> <span class="p">});</span>
+</span><span class="line">        <span class="p">}</span>
+</span><span class="line">        <span class="k">foreach</span> <span class="p">(</span><span class="n">NumClosure</span> <span class="n">numclosure</span> <span class="k">in</span> <span class="n">numclosures</span><span class="p">)</span>
+</span><span class="line">        <span class="p">{</span>
+</span><span class="line">            <span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="n">numclosure</span><span class="p">());</span>
+</span><span class="line">        <span class="p">}</span>
+</span><span class="line">    <span class="p">}</span>
+</span><span class="line"><span class="p">}</span>
+</span><span class="line">
+</span><span class="line"><span class="c1">// output from Mono 1.2.6</span>
+</span><span class="line"><span class="c1">// 1</span>
+</span><span class="line"><span class="c1">// 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>Please excuse the use of the NumClosure delegate. For some reason I could not get Mono to compile with Func<int>.</int></p>
+
+<p>Fortunately, all of these languages provide some kind of work-around. Ruby has Array#each, and C# has List&lt;&gt;.ForEach. Python has the map built-in.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach_rebind.py)</span> <a href="/downloads/code/foreach-mutation/foreach_rebind.py">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="py"><span class="line"><span></span><span class="n">nums</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+</span><span class="line"><span class="n">numclosures</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span class="line"><span class="k">def</span> <span class="nf">body</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+</span><span class="line">    <span class="n">numclosures</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">num</span><span class="p">)</span>
+</span><span class="line"><span class="nb">map</span><span class="p">(</span><span class="n">body</span><span class="p">,</span> <span class="n">nums</span><span class="p">)</span>
+</span><span class="line"><span class="k">for</span> <span class="n">numclosure</span> <span class="ow">in</span> <span class="n">numclosures</span><span class="p">:</span>
+</span><span class="line">    <span class="nb">print</span> <span class="n">numclosure</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line"><span class="c1"># output from Python 2.5.2</span>
+</span><span class="line"><span class="c1"># 0</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach_rebind.rb)</span> <a href="/downloads/code/foreach-mutation/foreach_rebind.rb">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+</pre></td><td class="code"><pre><code class="rb"><span class="line"><span></span><span class="n">nums</span> <span class="o">=</span> <span class="nb">Array</span><span class="o">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="o">]</span>
+</span><span class="line"><span class="n">numclosures</span> <span class="o">=</span> <span class="nb">Array</span><span class="o">.</span><span class="n">new</span>
+</span><span class="line"><span class="n">nums</span><span class="o">.</span><span class="n">each</span> <span class="p">{</span> <span class="o">|</span><span class="n">num</span><span class="o">|</span>
+</span><span class="line">    <span class="n">numclosures</span><span class="o">.</span><span class="n">push</span> <span class="nb">lambda</span> <span class="p">{</span> <span class="k">return</span> <span class="n">num</span> <span class="p">}</span>
+</span><span class="line"><span class="p">}</span>
+</span><span class="line"><span class="k">for</span> <span class="n">numclosure</span> <span class="k">in</span> <span class="n">numclosures</span>
+</span><span class="line">    <span class="nb">print</span> <span class="n">numclosure</span><span class="o">.</span><span class="n">call</span><span class="p">,</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span class="line"><span class="k">end</span>
+</span><span class="line">
+</span><span class="line"><span class="c1"># output from Ruby1.8:</span>
+</span><span class="line"><span class="c1"># 0</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach_rebind.cs)</span> <a href="/downloads/code/foreach-mutation/foreach_rebind.cs">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+</pre></td><td class="code"><pre><code class="csharp"><span class="line"><span></span><span class="k">using</span> <span class="nn">System</span><span class="p">;</span>
+</span><span class="line"><span class="k">using</span> <span class="nn">System.Collections.Generic</span><span class="p">;</span>
+</span><span class="line">
+</span><span class="line"><span class="k">public</span> <span class="k">static</span> <span class="k">class</span> <span class="nc">Foreach</span>
+</span><span class="line"><span class="p">{</span>
+</span><span class="line">    <span class="k">public</span> <span class="k">delegate</span> <span class="kt">int</span> <span class="nf">NumClosure</span><span class="p">();</span> <span class="c1">// Func&lt;int&gt; does not exist in the latest Mono???</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">public</span> <span class="k">static</span> <span class="k">void</span> <span class="nf">Main</span><span class="p">()</span>
+</span><span class="line">    <span class="p">{</span>
+</span><span class="line">        <span class="kt">int</span><span class="p">[]</span> <span class="n">nums</span> <span class="p">=</span> <span class="k">new</span> <span class="kt">int</span><span class="p">[]</span> <span class="p">{</span> <span class="m">0</span><span class="p">,</span> <span class="m">1</span> <span class="p">};</span>
+</span><span class="line">        <span class="n">List</span><span class="p">&lt;</span><span class="n">NumClosure</span><span class="p">&gt;</span> <span class="n">numclosures</span> <span class="p">=</span> <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="n">NumClosure</span><span class="p">&gt;();</span>
+</span><span class="line">        <span class="k">new</span> <span class="n">List</span><span class="p">&lt;</span><span class="kt">int</span><span class="p">&gt;(</span><span class="n">nums</span><span class="p">).</span><span class="n">ForEach</span><span class="p">(</span><span class="k">delegate</span> <span class="p">(</span><span class="kt">int</span> <span class="n">num</span><span class="p">)</span>
+</span><span class="line">        <span class="p">{</span>
+</span><span class="line">            <span class="n">numclosures</span><span class="p">.</span><span class="n">Add</span><span class="p">(</span><span class="k">delegate</span><span class="p">()</span> <span class="p">{</span> <span class="k">return</span> <span class="n">num</span><span class="p">;</span> <span class="p">});</span>
+</span><span class="line">        <span class="p">});</span>
+</span><span class="line">        <span class="k">foreach</span> <span class="p">(</span><span class="n">NumClosure</span> <span class="n">numclosure</span> <span class="k">in</span> <span class="n">numclosures</span><span class="p">)</span>
+</span><span class="line">        <span class="p">{</span>
+</span><span class="line">            <span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="n">numclosure</span><span class="p">());</span>
+</span><span class="line">        <span class="p">}</span>
+</span><span class="line">    <span class="p">}</span>
+</span><span class="line"><span class="p">}</span>
+</span><span class="line">
+</span><span class="line"><span class="c1">// output from Mono 1.2.6</span>
+</span><span class="line"><span class="c1">// 0</span>
+</span><span class="line"><span class="c1">// 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>Not everybody mutates their enumerators, however. Lisp, the language which normally requires every programmer to be an expert in variable scoping, handles iteration very cleanly:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach.cl)</span> <a href="/downloads/code/foreach-mutation/foreach.cl">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+</pre></td><td class="code"><pre><code class="cl"><span class="line"><span></span><span class="p">(</span><span class="k">let</span> <span class="p">((</span><span class="nv">nums</span> <span class="p">(</span><span class="nb">list</span> <span class="mi">0</span> <span class="mi">1</span><span class="p">))</span>
+</span><span class="line">      <span class="p">(</span><span class="nv">numclosures</span> <span class="p">(</span><span class="nb">list</span><span class="p">)))</span>
+</span><span class="line">  <span class="p">(</span><span class="k">progn</span>
+</span><span class="line">    <span class="p">(</span><span class="nb">dolist</span> <span class="p">(</span><span class="nv">num</span> <span class="nv">nums</span><span class="p">)</span>
+</span><span class="line">      <span class="p">(</span><span class="nb">push</span> <span class="nf">#&#39;</span><span class="p">(</span><span class="k">lambda</span> <span class="p">()</span> <span class="nv">num</span><span class="p">)</span> <span class="nv">numclosures</span><span class="p">))</span>
+</span><span class="line">    <span class="p">(</span><span class="nb">dolist</span> <span class="p">(</span><span class="nv">numclosure</span> <span class="nv">numclosures</span><span class="p">)</span>
+</span><span class="line">      <span class="p">(</span><span class="nb">format</span> <span class="no">t</span> <span class="s">&quot;~a~%&quot;</span> <span class="p">(</span><span class="nb">funcall</span> <span class="nv">numclosure</span><span class="p">)))))</span>
+</span><span class="line">
+</span><span class="line"><span class="c1">; output from SBCL 1.0.11.debian</span>
+</span><span class="line"><span class="c1">; 1</span>
+</span><span class="line"><span class="c1">; 0</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>And despite its messy syntax, Perl also scores a 10 for clean variable semantics:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (foreach.pl)</span> <a href="/downloads/code/foreach-mutation/foreach.pl">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+</pre></td><td class="code"><pre><code class="perl"><span class="line"><span></span><span class="k">my</span> <span class="nv">@nums</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+</span><span class="line"><span class="k">my</span> <span class="nv">@numclosures</span> <span class="o">=</span> <span class="p">();</span>
+</span><span class="line"><span class="k">for</span> <span class="k">my</span> <span class="nv">$num</span> <span class="p">(</span><span class="nv">@nums</span><span class="p">)</span> <span class="p">{</span>
+</span><span class="line">  <span class="nb">push</span> <span class="p">(</span><span class="nv">@numclosures</span><span class="p">,</span> <span class="k">sub</span> <span class="p">{</span> <span class="k">return</span> <span class="nv">$num</span><span class="p">;</span> <span class="p">});</span>
+</span><span class="line"><span class="p">}</span>
+</span><span class="line"><span class="k">for</span> <span class="k">my</span> <span class="nv">$numclosure</span> <span class="p">(</span><span class="nv">@numclosures</span><span class="p">)</span> <span class="p">{</span>
+</span><span class="line">  <span class="k">print</span> <span class="o">&amp;</span><span class="nv">$numclosure</span><span class="p">()</span> <span class="o">.</span> <span class="s">&quot;\n&quot;</span><span class="p">;</span>
+</span><span class="line"><span class="p">}</span>
+</span><span class="line">
+</span><span class="line"><span class="c1"># output from Perl 5.8.8:</span>
+</span><span class="line"><span class="c1"># 0</span>
+</span><span class="line"><span class="c1"># 1</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2008/10/04/faking-continuation-based-web-serving-using-exceptions/" data-toggle="tooltip"
+            data-placement="top" title="Faking continuation based web serving using exceptions">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2012/09/10/the-hundred-year-function/" data-toggle="tooltip"
+            data-placement="top" title="The Hundred-Year function">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

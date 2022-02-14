@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Faking continuation based web serving using exceptions</title>
+  <meta name="description" content="A friend has pointed out to me that the command line and web interface in my last post do not need to interact with the main game through an iterator. He proposed that the web interface could pause the execution of the game by using exceptions. I played with the idea, and discovered that he was right. The upshot is that continuation-based web serving can be faked in any language which has exceptions. (Lexical closures are also helpful, but can also be faked using objects.) The approach given below relies on neither CPS nor monads, and so has the added advantage of being fairly idiomatic in most mainstream languages.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2008/10/04/faking-continuation-based-web-serving-using-exceptions/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Faking continuation based web serving using exceptions">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2008/10/04/faking-continuation-based-web-serving-using-exceptions/">
+  <meta property="og:description" content="A friend has pointed out to me that the command line and web interface in my last post do not need to interact with the main game through an iterator. He proposed that the web interface could pause the execution of the game by using exceptions. I played with the idea, and discovered that he was right. The upshot is that continuation-based web serving can be faked in any language which has exceptions. (Lexical closures are also helpful, but can also be faked using objects.) The approach given below relies on neither CPS nor monads, and so has the added advantage of being fairly idiomatic in most mainstream languages.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Faking continuation based web serving using exceptions">
+  <meta name="twitter:description" content="A friend has pointed out to me that the command line and web interface in my last post do not need to interact with the main game through an iterator. He proposed that the web interface could pause...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Faking continuation based web serving using exceptions</h1>
+    
+    <p class="post-meta"><time datetime="2008-10-04T11:01:00-07:00" itemprop="datePublished">Oct 4, 2008</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+        <a href="/categories/continuation/">continuation</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/exception/">exception</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+        <a href="/categories/python/">python</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/separation-of-concern/">separation of concern</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>A friend has pointed out to me that the command line and web interface in my
+<a href="/2008/09/15/de-coupling-interfaces-with-yield-lambda/">last post</a>
+do not need to interact with
+the main game through an iterator. He proposed that the web interface could pause the execution of the game by using exceptions. I played with the idea, and discovered that he was right. The upshot is that continuation-based web serving can be faked in any language which has exceptions. (Lexical closures are also helpful, but can also be faked using objects.) The approach given below relies on neither CPS nor monads, and so has the added advantage of being fairly idiomatic in most mainstream languages.</p>
+
+<p>As before, our game is the children’s “Guess a number between 1 and 100” game:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (game.py)</span> <a href="/downloads/code/fake-continuation-server/game.py">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+<span class="line-number">31</span>
+<span class="line-number">32</span>
+<span class="line-number">33</span>
+<span class="line-number">34</span>
+<span class="line-number">35</span>
+<span class="line-number">36</span>
+</pre></td><td class="code"><pre><code class="py"><span class="line"><span></span><span class="kn">import</span> <span class="nn">random</span>
+</span><span class="line">
+</span><span class="line"><span class="n">rgen</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">Random</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line"><span class="k">class</span> <span class="nc">RandomNumberGame</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</span><span class="line">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">interface</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">interface</span> <span class="o">=</span> <span class="n">interface</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">start_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class="line">        <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">prompt_string</span><span class="p">(</span>
+</span><span class="line">                <span class="s2">&quot;Greetings. What is your name? &quot;</span><span class="p">)</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="s2">&quot;Hello, </span><span class="si">%s</span><span class="s2">.&quot;</span> <span class="o">%</span> <span class="p">(</span><span class="n">name</span><span class="p">,))</span>
+</span><span class="line">
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">__play_game</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">__play_game</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="s2">&quot;I am thinking of a number between 1 and 100.&quot;</span><span class="p">)</span>
+</span><span class="line">        <span class="n">my_number</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">rgen</span><span class="o">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">))</span>
+</span><span class="line">        <span class="n">num_guesses</span> <span class="o">=</span> <span class="mi">0</span>
+</span><span class="line">        <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+</span><span class="line">            <span class="n">user_number</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">prompt_int</span><span class="p">(</span><span class="s2">&quot;Guess: &quot;</span><span class="p">)</span>
+</span><span class="line">            <span class="n">num_guesses</span> <span class="o">+=</span> <span class="mi">1</span>
+</span><span class="line">            <span class="k">if</span> <span class="n">my_number</span> <span class="o">==</span> <span class="n">user_number</span><span class="p">:</span>
+</span><span class="line">                <span class="k">break</span>
+</span><span class="line">            <span class="k">elif</span> <span class="n">my_number</span> <span class="o">&lt;</span> <span class="n">user_number</span><span class="p">:</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="s2">&quot;Try lower.&quot;</span><span class="p">)</span>
+</span><span class="line">            <span class="k">else</span><span class="p">:</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="s2">&quot;Try higher.&quot;</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="s2">&quot;Correct in </span><span class="si">%s</span><span class="s2"> guesses.&quot;</span> <span class="o">%</span> <span class="n">num_guesses</span><span class="p">)</span>
+</span><span class="line">        <span class="n">play_again</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">prompt_yes_no</span><span class="p">(</span><span class="s2">&quot;Play again? &quot;</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">if</span> <span class="n">play_again</span><span class="p">:</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">__play_game</span><span class="p">()</span>
+</span><span class="line">        <span class="k">else</span><span class="p">:</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">interface</span><span class="o">.</span><span class="n">display</span><span class="p">(</span><span class="s2">&quot;Thank you for playing.&quot;</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>I like this version much better because the ugly wart of before:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># The coroutine equivalent of self.__play_game()
+</span><span class="nb">iter</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">__play_game</span><span class="p">()</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="k">yield</span> <span class="nb">iter</span><span class="p">.</span><span class="nb">next</span><span class="p">()</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="k">yield</span> <span class="nb">iter</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="k">except</span> <span class="nb">StopIteration</span><span class="p">:</span>
+    <span class="k">pass</span>
+</code></pre></div></div>
+
+<p>has been simplified to:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="bp">self</span><span class="p">.</span><span class="n">__play_game</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>The interface between the game and the user interface is the same as before, with one addition:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">display</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>       <span class="c1"># displays the given text to the user and returns None
+</span><span class="n">prompt_string</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="c1"># displays the given text to the user and returns a string input by the user
+</span><span class="n">prompt_int</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>    <span class="c1"># display the given text to the user and returns an int input by the user
+</span><span class="n">prompt_yes_no</span><span class="p">(</span><span class="n">text</span><span class="p">)</span> <span class="c1"># display the given text to the user and returns True for yes and False for no
+</span>
+<span class="n">get</span><span class="p">(</span><span class="n">callback</span><span class="p">)</span>       <span class="c1"># invokes the callback and returns what it returns
+</span></code></pre></div></div>
+
+<p>The new method “get” is made use of in the game when generating the answer for the game:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">my_number</span> <span class="o">=</span> <span class="bp">self</span><span class="p">.</span><span class="n">interface</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">rgen</span><span class="p">.</span><span class="n">randint</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">100</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>Retrieving the random number through self.interface.get ensures that the game will not be constantly changing its answer while a user is playing through the web interface.</p>
+
+<p>As before, the command line interface is very simple:</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (cli.py)</span> <a href="/downloads/code/fake-continuation-server/cli.py">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+</pre></td><td class="code"><pre><code class="py"><span class="line"><span></span><span class="ch">#!/usr/bin/env python</span>
+</span><span class="line">
+</span><span class="line"><span class="k">class</span> <span class="nc">CommandLineInterface</span><span class="p">:</span>
+</span><span class="line">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">routine</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">routine</span> <span class="o">=</span> <span class="n">routine</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">routine</span><span class="o">.</span><span class="n">start_game</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+</span><span class="line">        <span class="k">return</span> <span class="n">f</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">        <span class="nb">print</span> <span class="n">prompt</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">prompt_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">        <span class="k">return</span> <span class="n">raw_input</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">prompt_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">        <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">raw_input</span><span class="p">(</span><span class="n">prompt</span><span class="p">))</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">prompt_yes_no</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">        <span class="n">response</span> <span class="o">=</span> <span class="n">raw_input</span><span class="p">(</span><span class="n">prompt</span><span class="p">)</span>
+</span><span class="line">        <span class="k">return</span> <span class="n">response</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">response</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s1">&#39;Y&#39;</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line"><span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+</span><span class="line">    <span class="kn">from</span> <span class="nn">game</span> <span class="kn">import</span> <span class="n">RandomNumberGame</span>
+</span><span class="line">    <span class="n">cmd</span> <span class="o">=</span> <span class="n">CommandLineInterface</span><span class="p">(</span><span class="n">RandomNumberGame</span><span class="p">)</span>
+</span><span class="line">    <span class="n">cmd</span><span class="o">.</span><span class="n">run</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+<p>The web interface works by raising a StopWebInterface exception when execution of the game needs to be paused so that the user can input some data into a form. Our abstraction is thus slightly leaky, in that a game which at some point generically caught all types of exceptions might interfere with the behavior of the web interface. The <a href="/blog/2008/09/15/de-coupling-interfaces-with-yield-lambda/">yield lambda</a> solution did not have this problem.</p>
+
+<div class="bogus-wrapper"><notextile><figure class="code"><figcaption><span> (web.py)</span> <a href="/downloads/code/fake-continuation-server/web.py">download</a></figcaption>
+ <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class="line-number">1</span>
+<span class="line-number">2</span>
+<span class="line-number">3</span>
+<span class="line-number">4</span>
+<span class="line-number">5</span>
+<span class="line-number">6</span>
+<span class="line-number">7</span>
+<span class="line-number">8</span>
+<span class="line-number">9</span>
+<span class="line-number">10</span>
+<span class="line-number">11</span>
+<span class="line-number">12</span>
+<span class="line-number">13</span>
+<span class="line-number">14</span>
+<span class="line-number">15</span>
+<span class="line-number">16</span>
+<span class="line-number">17</span>
+<span class="line-number">18</span>
+<span class="line-number">19</span>
+<span class="line-number">20</span>
+<span class="line-number">21</span>
+<span class="line-number">22</span>
+<span class="line-number">23</span>
+<span class="line-number">24</span>
+<span class="line-number">25</span>
+<span class="line-number">26</span>
+<span class="line-number">27</span>
+<span class="line-number">28</span>
+<span class="line-number">29</span>
+<span class="line-number">30</span>
+<span class="line-number">31</span>
+<span class="line-number">32</span>
+<span class="line-number">33</span>
+<span class="line-number">34</span>
+<span class="line-number">35</span>
+<span class="line-number">36</span>
+<span class="line-number">37</span>
+<span class="line-number">38</span>
+<span class="line-number">39</span>
+<span class="line-number">40</span>
+<span class="line-number">41</span>
+<span class="line-number">42</span>
+<span class="line-number">43</span>
+<span class="line-number">44</span>
+<span class="line-number">45</span>
+<span class="line-number">46</span>
+<span class="line-number">47</span>
+<span class="line-number">48</span>
+<span class="line-number">49</span>
+<span class="line-number">50</span>
+<span class="line-number">51</span>
+<span class="line-number">52</span>
+<span class="line-number">53</span>
+<span class="line-number">54</span>
+<span class="line-number">55</span>
+<span class="line-number">56</span>
+<span class="line-number">57</span>
+<span class="line-number">58</span>
+<span class="line-number">59</span>
+<span class="line-number">60</span>
+<span class="line-number">61</span>
+<span class="line-number">62</span>
+<span class="line-number">63</span>
+<span class="line-number">64</span>
+<span class="line-number">65</span>
+<span class="line-number">66</span>
+<span class="line-number">67</span>
+<span class="line-number">68</span>
+<span class="line-number">69</span>
+<span class="line-number">70</span>
+<span class="line-number">71</span>
+<span class="line-number">72</span>
+<span class="line-number">73</span>
+<span class="line-number">74</span>
+<span class="line-number">75</span>
+<span class="line-number">76</span>
+<span class="line-number">77</span>
+<span class="line-number">78</span>
+<span class="line-number">79</span>
+<span class="line-number">80</span>
+<span class="line-number">81</span>
+<span class="line-number">82</span>
+<span class="line-number">83</span>
+<span class="line-number">84</span>
+<span class="line-number">85</span>
+<span class="line-number">86</span>
+<span class="line-number">87</span>
+<span class="line-number">88</span>
+<span class="line-number">89</span>
+<span class="line-number">90</span>
+<span class="line-number">91</span>
+<span class="line-number">92</span>
+<span class="line-number">93</span>
+<span class="line-number">94</span>
+<span class="line-number">95</span>
+<span class="line-number">96</span>
+<span class="line-number">97</span>
+<span class="line-number">98</span>
+<span class="line-number">99</span>
+<span class="line-number">100</span>
+<span class="line-number">101</span>
+<span class="line-number">102</span>
+<span class="line-number">103</span>
+<span class="line-number">104</span>
+<span class="line-number">105</span>
+<span class="line-number">106</span>
+<span class="line-number">107</span>
+<span class="line-number">108</span>
+<span class="line-number">109</span>
+<span class="line-number">110</span>
+<span class="line-number">111</span>
+<span class="line-number">112</span>
+<span class="line-number">113</span>
+<span class="line-number">114</span>
+<span class="line-number">115</span>
+<span class="line-number">116</span>
+<span class="line-number">117</span>
+<span class="line-number">118</span>
+<span class="line-number">119</span>
+<span class="line-number">120</span>
+<span class="line-number">121</span>
+<span class="line-number">122</span>
+<span class="line-number">123</span>
+<span class="line-number">124</span>
+<span class="line-number">125</span>
+<span class="line-number">126</span>
+<span class="line-number">127</span>
+<span class="line-number">128</span>
+<span class="line-number">129</span>
+<span class="line-number">130</span>
+<span class="line-number">131</span>
+<span class="line-number">132</span>
+<span class="line-number">133</span>
+<span class="line-number">134</span>
+<span class="line-number">135</span>
+<span class="line-number">136</span>
+<span class="line-number">137</span>
+<span class="line-number">138</span>
+<span class="line-number">139</span>
+<span class="line-number">140</span>
+<span class="line-number">141</span>
+</pre></td><td class="code"><pre><code class="py"><span class="line"><span></span><span class="ch">#!/usr/bin/env python</span>
+</span><span class="line">
+</span><span class="line"><span class="kn">import</span> <span class="nn">cgi</span>
+</span><span class="line"><span class="kn">from</span> <span class="nn">wsgiref.simple_server</span> <span class="kn">import</span> <span class="n">make_server</span>
+</span><span class="line">
+</span><span class="line"><span class="c1"># Everytime we generate an html page, we create a hidden input element</span>
+</span><span class="line"><span class="c1"># with this name. It lets us know which saved history must be resumed</span>
+</span><span class="line"><span class="c1"># in order to continue the program.</span>
+</span><span class="line"><span class="n">HISTORY_FORM_NAME</span> <span class="o">=</span> <span class="s1">&#39;WebInterface_history_index&#39;</span>
+</span><span class="line">
+</span><span class="line"><span class="k">class</span> <span class="nc">History</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</span><span class="line">    <span class="sd">&quot;&quot;&quot;A record of past values returned by the routine. Useful for playback.</span>
+</span><span class="line"><span class="sd">       self.get_pending is a function which takes a dictionary like object</span>
+</span><span class="line"><span class="sd">           corresponding to the POST variables, and returns the new value</span>
+</span><span class="line"><span class="sd">           to be added to the history.</span>
+</span><span class="line"><span class="sd">       self.old_values is all of the results of functions yielded by the routine.</span>
+</span><span class="line"><span class="sd">       &quot;&quot;&quot;</span>
+</span><span class="line">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">get_pending</span><span class="p">,</span> <span class="n">old_values</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">get_pending</span> <span class="o">=</span> <span class="n">get_pending</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">old_values</span> <span class="o">=</span> <span class="n">old_values</span>
+</span><span class="line">
+</span><span class="line"><span class="k">class</span> <span class="nc">StopWebInterface</span><span class="p">(</span><span class="ne">Exception</span><span class="p">):</span>
+</span><span class="line">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">get_pending</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">get_pending</span> <span class="o">=</span> <span class="n">get_pending</span>
+</span><span class="line">
+</span><span class="line"><span class="k">class</span> <span class="nc">WebInterface</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</span><span class="line">    <span class="sd">&quot;&quot;&quot;WebInterface wraps around a routine class to allow for the routine to</span>
+</span><span class="line"><span class="sd">       be executed through a browser. It works by remembering the results</span>
+</span><span class="line"><span class="sd">       of functions that were yielded by the routine. In order to pick up</span>
+</span><span class="line"><span class="sd">       where it left off, the routine is re-run with the remembered values,</span>
+</span><span class="line"><span class="sd">       a new value is parsed from the POST variables, and the routine keeps</span>
+</span><span class="line"><span class="sd">       running until it reaches another prompt.&quot;&quot;&quot;</span>
+</span><span class="line">    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">routine_class</span><span class="p">):</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">routine_class</span> <span class="o">=</span> <span class="n">routine_class</span>
+</span><span class="line">        <span class="bp">self</span><span class="o">.</span><span class="n">histories</span> <span class="o">=</span> <span class="p">[</span><span class="n">History</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="p">[])]</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">def</span> <span class="nf">respond</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+</span><span class="line">        <span class="n">responder</span> <span class="o">=</span> <span class="n">WebInterface</span><span class="o">.</span><span class="n">Response</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">)</span>
+</span><span class="line">        <span class="k">return</span> <span class="n">responder</span><span class="o">.</span><span class="n">respond</span><span class="p">()</span>
+</span><span class="line">
+</span><span class="line">    <span class="k">class</span> <span class="nc">Response</span><span class="p">:</span>
+</span><span class="line">        <span class="sd">&quot;&quot;&quot;The Response class is instantiated for every HTTP request.</span>
+</span><span class="line"><span class="sd">           It grabs the appropriate history according to the value in the POST</span>
+</span><span class="line"><span class="sd">           variable &#39;WebInterface_history_index&#39;. Using that history, it</span>
+</span><span class="line"><span class="sd">           re-runs the routine with the contained old_values, parses the POST</span>
+</span><span class="line"><span class="sd">           variables for any new values using get_pending, and continues the</span>
+</span><span class="line"><span class="sd">           routine until it needs to make another request. For simplicity,</span>
+</span><span class="line"><span class="sd">           it modifies web_interface.histories directly. A real</span>
+</span><span class="line"><span class="sd">           implementation would need to protect this variable using locks</span>
+</span><span class="line"><span class="sd">           (or find a mutation-free solution), since it is possible for</span>
+</span><span class="line"><span class="sd">           the wsgi server to make concurrent calls to WebInterface.respond.</span>
+</span><span class="line"><span class="sd">           &quot;&quot;&quot;</span>
+</span><span class="line">        <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">web_interface</span><span class="p">,</span> <span class="n">environ</span><span class="p">,</span> <span class="n">start_response</span><span class="p">):</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">web_interface</span> <span class="o">=</span> <span class="n">web_interface</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">environ</span> <span class="o">=</span> <span class="n">environ</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">start_response</span> <span class="o">=</span> <span class="n">start_response</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">respond</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class="line">            <span class="n">routine</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">web_interface</span><span class="o">.</span><span class="n">routine_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">form</span> <span class="o">=</span> <span class="n">cgi</span><span class="o">.</span><span class="n">FieldStorage</span><span class="p">(</span><span class="n">fp</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;wsgi.input&#39;</span><span class="p">],</span><span class="n">environ</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">environ</span><span class="p">)</span>
+</span><span class="line">            <span class="n">history_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">form</span><span class="o">.</span><span class="n">getvalue</span><span class="p">(</span><span class="n">HISTORY_FORM_NAME</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s2">&quot;0&quot;</span><span class="p">))</span>
+</span><span class="line">            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">web_interface</span><span class="o">.</span><span class="n">histories</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">history_index</span><span class="p">:</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;412 Cannot read the future&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/html&#39;</span><span class="p">)])</span>
+</span><span class="line">                <span class="k">return</span> <span class="p">[</span><span class="s2">&quot;That history has not yet been written.&quot;</span><span class="p">]</span>
+</span><span class="line">
+</span><span class="line">            <span class="c1"># Copy the history in order to create a new history.</span>
+</span><span class="line">            <span class="n">history_orig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">web_interface</span><span class="o">.</span><span class="n">histories</span><span class="p">[</span><span class="n">history_index</span><span class="p">]</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">history</span> <span class="o">=</span> <span class="n">History</span><span class="p">(</span><span class="n">history_orig</span><span class="o">.</span><span class="n">get_pending</span><span class="p">,</span> <span class="n">history_orig</span><span class="o">.</span><span class="n">old_values</span><span class="p">[:])</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">start_response</span><span class="p">(</span><span class="s1">&#39;200 OK&#39;</span><span class="p">,</span> <span class="p">[(</span><span class="s1">&#39;Content-type&#39;</span><span class="p">,</span> <span class="s1">&#39;text/html&#39;</span><span class="p">)])</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">=</span> <span class="p">[</span> <span class="s1">&#39;&lt;form method=&quot;POST&quot;&gt;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="p">]</span>
+</span><span class="line">
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">paused</span> <span class="o">=</span> <span class="kc">False</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">iter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iterate_old_values</span><span class="p">()</span>
+</span><span class="line">            <span class="k">try</span><span class="p">:</span>
+</span><span class="line">                <span class="n">routine</span><span class="o">.</span><span class="n">start_game</span><span class="p">()</span>
+</span><span class="line">            <span class="k">except</span> <span class="n">StopWebInterface</span><span class="p">,</span> <span class="n">inst</span><span class="p">:</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">get_pending</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">get_pending</span>
+</span><span class="line">
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">web_interface</span><span class="o">.</span><span class="n">histories</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="p">)</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;&lt;input type=&quot;hidden&quot; name=&quot;</span><span class="si">%s</span><span class="s1">&quot; value=&quot;</span><span class="si">%s</span><span class="s1">&quot;&gt;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">HISTORY_FORM_NAME</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">web_interface</span><span class="o">.</span><span class="n">histories</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+</span><span class="line">            <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;&lt;/form&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+</span><span class="line">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">output</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">iterate_old_values</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class="line">            <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">old_values</span><span class="p">:</span>
+</span><span class="line">                <span class="k">yield</span> <span class="n">val</span>
+</span><span class="line">            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">get_pending</span> <span class="o">!=</span> <span class="kc">None</span><span class="p">:</span>
+</span><span class="line">                <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">get_pending</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">old_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+</span><span class="line">                <span class="k">yield</span> <span class="n">val</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">f</span><span class="p">):</span>
+</span><span class="line">            <span class="k">try</span><span class="p">:</span>
+</span><span class="line">                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+</span><span class="line">            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+</span><span class="line">                <span class="n">val</span> <span class="o">=</span> <span class="n">f</span><span class="p">()</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">old_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">val</span><span class="p">)</span>
+</span><span class="line">                <span class="k">return</span> <span class="n">val</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+</span><span class="line">            <span class="k">try</span><span class="p">:</span>
+</span><span class="line">                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+</span><span class="line">            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">+=</span> <span class="nb">str</span> <span class="o">+</span> <span class="s2">&quot;&lt;br/&gt;</span><span class="se">\n</span><span class="s2">&quot;</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">history</span><span class="o">.</span><span class="n">old_values</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">prompt_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_type</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">prompt_int</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_type</span><span class="p">(</span><span class="n">prompt</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">prompt_yes_no</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">):</span>
+</span><span class="line">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_and_pause</span><span class="p">(</span>
+</span><span class="line">                    <span class="n">prompt</span><span class="p">,</span>
+</span><span class="line">                    <span class="p">[(</span><span class="s2">&quot;submit&quot;</span><span class="p">,</span> <span class="s2">&quot;btn_yes&quot;</span><span class="p">,</span> <span class="s2">&quot;Yes&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;submit&quot;</span><span class="p">,</span> <span class="s2">&quot;btn_no&quot;</span><span class="p">,</span> <span class="s2">&quot;No&quot;</span><span class="p">)],</span>
+</span><span class="line">                    <span class="k">lambda</span> <span class="n">form</span><span class="p">:</span> <span class="n">form</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s1">&#39;btn_yes&#39;</span><span class="p">))</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">prompt_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">type_parse</span><span class="p">):</span>
+</span><span class="line">            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">prompt_and_pause</span><span class="p">(</span>
+</span><span class="line">                    <span class="n">prompt</span><span class="p">,</span>
+</span><span class="line">                    <span class="p">[(</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="s2">&quot;prompt&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;submit&quot;</span><span class="p">,</span> <span class="s2">&quot;btn_submit&quot;</span><span class="p">,</span> <span class="s2">&quot;Enter&quot;</span><span class="p">)],</span>
+</span><span class="line">                    <span class="k">lambda</span> <span class="n">form</span><span class="p">:</span> <span class="n">type_parse</span><span class="p">(</span><span class="n">form</span><span class="p">[</span><span class="s2">&quot;prompt&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">))</span>
+</span><span class="line">
+</span><span class="line">        <span class="k">def</span> <span class="nf">prompt_and_pause</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">prompt</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">parse_form</span><span class="p">):</span>
+</span><span class="line">            <span class="k">try</span><span class="p">:</span>
+</span><span class="line">                <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">iter</span><span class="o">.</span><span class="n">next</span><span class="p">()</span>
+</span><span class="line">                <span class="k">return</span> <span class="n">val</span>
+</span><span class="line">            <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+</span><span class="line">                <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">+=</span> <span class="n">prompt</span>
+</span><span class="line">                <span class="k">for</span> <span class="nb">input</span> <span class="ow">in</span> <span class="n">inputs</span><span class="p">:</span>
+</span><span class="line">                    <span class="bp">self</span><span class="o">.</span><span class="n">output</span> <span class="o">+=</span> <span class="s1">&#39;&lt;input type=&quot;</span><span class="si">%s</span><span class="s1">&quot; name=&quot;</span><span class="si">%s</span><span class="s1">&quot; value=&quot;</span><span class="si">%s</span><span class="s1">&quot;&gt;</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">%</span> <span class="nb">input</span>
+</span><span class="line">                <span class="k">def</span> <span class="nf">read_from_form</span><span class="p">(</span><span class="n">responder</span><span class="p">):</span>
+</span><span class="line">                    <span class="k">return</span> <span class="n">parse_form</span><span class="p">(</span><span class="n">responder</span><span class="o">.</span><span class="n">form</span><span class="p">)</span>
+</span><span class="line">                <span class="k">raise</span> <span class="n">StopWebInterface</span><span class="p">(</span><span class="n">read_from_form</span><span class="p">)</span>
+</span><span class="line">
+</span><span class="line"><span class="k">if</span> <span class="vm">__name__</span><span class="o">==</span><span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+</span><span class="line">    <span class="kn">from</span> <span class="nn">game</span> <span class="kn">import</span> <span class="n">RandomNumberGame</span>
+</span><span class="line">    <span class="n">interface</span> <span class="o">=</span> <span class="n">WebInterface</span><span class="p">(</span><span class="n">RandomNumberGame</span><span class="p">)</span>
+</span><span class="line">    <span class="n">httpd</span> <span class="o">=</span> <span class="n">make_server</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="mi">8000</span><span class="p">,</span> <span class="n">interface</span><span class="o">.</span><span class="n">respond</span><span class="p">)</span>
+</span><span class="line">    <span class="n">httpd</span><span class="o">.</span><span class="n">serve_forever</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure></notextile></div>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2008/09/15/de-coupling-interfaces-with-yield-lambda/" data-toggle="tooltip"
+            data-placement="top" title="De-coupling interfaces with 'yield lambda'">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2008/10/18/foreach-mutation/" data-toggle="tooltip"
+            data-placement="top" title="Foreach mutation">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

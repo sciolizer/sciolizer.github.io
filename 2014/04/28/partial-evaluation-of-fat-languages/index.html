@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Partial evaluation of fat languages</title>
+  <meta name="description" content="Language theory has always been my favorite part of computer science, and recently I have been playing around with partial evaluation. Creating an optimal, self-applicable specializer is really tricky. I thought that I was helping myself by working in a very minimal language, but this turned out to be counter-productive. It is easier to write a specializer in a language that has a large number of unnecessary primitives. The additional complexity of each primitive is very localized: just add another case to the giant switch statement, which does nothing more than “lift” the container language’s primitive into the contained language, and is a small price to pay for easing the coding of the rest of the specializer.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2014/04/28/partial-evaluation-of-fat-languages/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Partial evaluation of fat languages">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2014/04/28/partial-evaluation-of-fat-languages/">
+  <meta property="og:description" content="Language theory has always been my favorite part of computer science, and recently I have been playing around with partial evaluation. Creating an optimal, self-applicable specializer is really tricky. I thought that I was helping myself by working in a very minimal language, but this turned out to be counter-productive. It is easier to write a specializer in a language that has a large number of unnecessary primitives. The additional complexity of each primitive is very localized: just add another case to the giant switch statement, which does nothing more than “lift” the container language’s primitive into the contained language, and is a small price to pay for easing the coding of the rest of the specializer.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Partial evaluation of fat languages">
+  <meta name="twitter:description" content="Language theory has always been my favorite part of computer science, and recently I have been playing around with partial evaluation. Creating an optimal, self-applicable specializer is really tri...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Partial evaluation of fat languages</h1>
+    
+    <p class="post-meta"><time datetime="2014-04-28T18:01:18-07:00" itemprop="datePublished">Apr 28, 2014</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/partial-evaluation/">partial evaluation</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/programming-languages/">programming languages</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>Language theory has always been my favorite part of computer science, and recently I have been playing around with partial evaluation. Creating an optimal, self-applicable specializer is really tricky. I thought that I was helping myself by working in a very minimal language, but this turned out to be counter-productive. It is easier to write a specializer in a language that has a large number of unnecessary primitives. The additional complexity of each primitive is very localized: just add another case to the giant switch statement, which does nothing more than “lift” the container language’s primitive into the contained language, and is a small price to pay
+for easing the coding of the <em>rest</em> of the specializer.</p>
+
+<p>But that was not the only benefit! It turns out that having extra constructs also makes the binding-time analysis easier. (Binding-time analysis is the task of figuring out which parts of a program are static and which are dynamic for a given partial input.) An obvious example is booleans. Using church-encoded booleans is more minimal than having primitive booleans and an if-then-else construct, but analyzing the former is harder, since it requires analysis of higher-order functions, which usually requires writing a type-inference algorithm. Maps are another example. Lisp-style association lists seem like a natural approach, but, unless you do some very sophisticated analysis, the specializer will fail to recognize when the keys are static and the values are dynamic, and so
+appromixate to marking the entire data structure as dynamic (which usually kills optimality). By making maps a primitive in the language, you can code especially for that scenario.</p>
+
+<p>For anybody interested in partial evaluation, I highly recommend the
+<a href="http://www.itu.dk/~sestoft/pebook/pebook.html">Jones, Gomard, and Sestoft book</a>.
+It is extremely lucid in its exposition, not only of partial evaluation, but of many other analysis and transformational techniques. For instance, a year or so ago I was trying to understand abstract interpretation, but I could not find a succinct explanation of the algorithm anywhere. It turns out they provide one in chapter 15. They do it in only five pages, most of which is examples. Another example is supercompilation, which was opaque to me until I read Neil Mitchell’s excellent paper on
+<a href="http://ndmitchell.com/downloads/paper-rethinking_supercompilation-29_sep_2010.pdf">Supero</a>.
+But if he hadn’t written it, I could have turned to chapter 17 of the book, which incidentally also covers deforestation in the same breath. I think the only computer science book which I have revisited more frequently than this one is
+<a href="http://aima.cs.berkeley.edu/">Norvig and Russell’s book on artificial intelligence</a>.
+Pierce’s <a href="https://mitpress.mit.edu/books/types-and-programming-languages">Types and Programming Languages</a> is a close 3rd.</p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2014/01/25/automatic-redis/" data-toggle="tooltip"
+            data-placement="top" title="Automatic redis, part two: sorting and data structures">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2014/12/08/using-unsafeinterleaveio-to-lift-haskells-lazy-semantics-into-a-toy-interpreter/" data-toggle="tooltip"
+            data-placement="top" title="Using unsafeInterleaveIO to lift haskell's lazy semantics into a toy interpreter">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

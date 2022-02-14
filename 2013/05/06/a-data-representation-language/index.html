@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>A data representation language</title>
+  <meta name="description" content="I have an idea for a language, and I want to know if it already exists. The language is a data representation language. It encodes rules about how data is represented in a store (e.g. MySQL, HBase, Riak, Neo4J, MongoDB, Redis, flat files). The language would have four directives: entity, predicate, operation, and realize. The entity directive gives the “platonic” description of a type.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2013/05/06/a-data-representation-language/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="A data representation language">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2013/05/06/a-data-representation-language/">
+  <meta property="og:description" content="I have an idea for a language, and I want to know if it already exists. The language is a data representation language. It encodes rules about how data is represented in a store (e.g. MySQL, HBase, Riak, Neo4J, MongoDB, Redis, flat files). The language would have four directives: entity, predicate, operation, and realize. The entity directive gives the “platonic” description of a type.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="A data representation language">
+  <meta name="twitter:description" content="I have an idea for a language, and I want to know if it already exists. The language is a data representation language. It encodes rules about how data is represented in a store (e.g. MySQL, HBase,...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">A data representation language</h1>
+    
+    <p class="post-meta"><time datetime="2013-05-06T18:58:50-07:00" itemprop="datePublished">May 6, 2013</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/programming-language/">programming language</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>I have an idea for a language, and I want to know if it already exists.
+The language is a data representation language. It encodes rules about how data is represented in a store
+(e.g. MySQL, HBase, Riak, Neo4J, MongoDB, Redis, flat files).
+The language would have four directives: <code class="language-plaintext highlighter-rouge">entity</code>, <code class="language-plaintext highlighter-rouge">predicate</code>, <code class="language-plaintext highlighter-rouge">operation</code>, and <code class="language-plaintext highlighter-rouge">realize</code>.
+The <code class="language-plaintext highlighter-rouge">entity</code> directive gives the “platonic” description of a type.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>entity User
+  Id id
+  String userName
+  String displayName
+
+entity Task
+  Id id
+  String name
+  Date dueDate
+
+entity UserTask // encodes many-to-many relationship
+  Id id
+  User user
+  Task task
+
+entity Comment
+  Id id
+  Task parentTask
+  String comment
+  Date when
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">predicate</code> directive tells how these types are represented. For example, to represent the user object in a relational
+database:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import RDBMS
+
+predicate forall u: User exists r: RelationalRow where
+  r.table = 'User' and
+  r['id'] = u.id and
+  r['userName'] = u.userName and
+  r['displayName'] = u.displayName
+</code></pre></div></div>
+
+<p>or in a key value store:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import KeyValue
+import Pickle
+
+predicate forall u: User exists p: KeyValuePair where
+  p.key = "User." + u.id.toString() and
+  p.value : Pickled&lt;Map&lt;String,String&gt;&gt; and
+  p.value['userName'] = u.userName and
+  p.value['displayName'] = u.displayName
+</code></pre></div></div>
+
+<p>You can also use predicates to specify how types are embodied in classes.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>predicate forall u: User exists o: Object where
+  o.class = 'org.example.myapp.objects.User' and
+  o['id'] = u.id and
+  o['displayName'] = u.displayName
+</code></pre></div></div>
+
+<p>Notice that I left out <code class="language-plaintext highlighter-rouge">userName</code>; classes do not have to be perfectly aligned with the platonic entities. You can even combine
+different entities into a single class. For example, imagine a Java class like this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>public class Task {
+  public long id;
+  public String name;
+  public Date dueDate;
+  public List&lt;Comment&gt; comments;
+}
+</code></pre></div></div>
+
+<p>Even though tasks and comments are separate entites, you can still map between them and the task class:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>predicate forall t: Task exists o: Object where
+  o.class = 'org.example.myapp.objects.Task' and
+  o['id'] = t.id and
+  o['name'] = t.name and
+  o['dueDate'] = dueDate and
+  o['comments'] : List and
+  o `sortedBy` (c =&gt; c['when']) and
+  forall c: Comment (c.parentTask = t =&gt;
+    exists co: Object where
+    co `in` o['comments'] and
+    co.class = 'org.example.myapp.objects.Comment' and
+    co['id'] = c.id and
+    co['when'] = c.when
+    co['comment'] = c.comment) and
+  forall co: Object (co `in` o['comments'] =&gt;
+    exists c: Comment where
+    c.parentTask = t and
+    c.id = co['id'])
+</code></pre></div></div>
+
+<p>It’s a little crazy, but it could be made simpler with a library function and/or syntactic sugar saying “this embodied list matches this list of entites”. I just wanted to give you some idea of how flexible I want this language to be.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">operation</code> directive gives names to operations that might be performed on the entities.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>operation createUser(userName: in String, displayName: in String) where
+  exists u: User and
+  u.userName = userName and
+  u.displayName = displayName and
+  u.id `notIn` Before.User and
+  After.User = Before.User + u
+
+operation getTasksForUser(userId: in Id, tasks: out Set&lt;Task&gt;) where
+  exists u: User where u.id = userId =&gt; (
+  forall t: Task (exists ut: UserTask where
+      ut.user = u and
+      ut.task = t =&gt;
+    ut.task `in` tasks) and
+  forall t: Task (t `in` tasks =&gt;
+    exists ut: User where ut.user = u and ut.task = t))
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">realize</code> directive indicates how operations will be realized using concrete classes.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>realize createUser as
+  void createUser(userName: java.lang.String, displayName: java.lang.String)
+
+realize getTasksForUser as
+  java.util.Set&lt;org.example.myapp.objects.Task&gt; getTasksForUser(u: org.example.myapp.objects.User)
+</code></pre></div></div>
+
+<p>Compiling would generate a code block for each <code class="language-plaintext highlighter-rouge">realize</code> directive. It would fail if any of the operations were impossible.
+(e.g. <code class="language-plaintext highlighter-rouge">getTasksForUser</code> would be impossible for a key-value store if you had stored only 
+<code class="language-plaintext highlighter-rouge">Task =&gt; [User]</code> pairs and forgotten the <code class="language-plaintext highlighter-rouge">User =&gt; [Taks]</code> pairs. It would generate a warning if any of the operations were slow.
+(e.g. <code class="language-plaintext highlighter-rouge">getCommentsForTask</code> on an ordered key-value store when the comments were indexed by <code class="language-plaintext highlighter-rouge">commentId</code> and not by <code class="language-plaintext highlighter-rouge">$taskId:$commentId</code>)</p>
+
+<p>So, does a language like this already exist? I know there are several things that come close, ORMs being the obvious example. Most ORMs require you to build schemas according to THEIR rules, not your own rules, and the exceptional ones require you to
+write custom code, usually 4 different times, for the get, set, update, and delete cases, when the representation is anything
+non-standard.</p>
+
+<p>I want something that can handle</p>
+
+<ul>
+  <li>multiple stores simultaneously, e.g. memcache and MySQL.</li>
+  <li>denormalized data. e.g. if I have a User-to-Task and a Task-to-User representation of <code class="language-plaintext highlighter-rouge">UserTask</code> in a sharded database, the code generated for <code class="language-plaintext highlighter-rouge">createUserTask</code> should do two inserts.</li>
+  <li>other really crazy representations, such as
+    <ul>
+      <li>In a column family database, storing the first comment of a task in the <code class="language-plaintext highlighter-rouge">comment1</code> column of the row for that task, the second comment in the <code class="language-plaintext highlighter-rouge">comment2</code> column, etc.</li>
+      <li>Putting a sentinel value in a redis list so I can tell the difference between an empty list and <code class="language-plaintext highlighter-rouge">unknown</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>Since it seems really useful, I would love to write this language, but honestly, I don’t even know where to begin.
+Conceptually, how do you translate quantified logic into imperative code? What would abstraction look like in this language?
+(e.g. Can I make a <code class="language-plaintext highlighter-rouge">listEqualsList</code> function?) Outside of the <code class="language-plaintext highlighter-rouge">entity</code>/<code class="language-plaintext highlighter-rouge">predicate</code>/<code class="language-plaintext highlighter-rouge">operation</code>/<code class="language-plaintext highlighter-rouge">realize</code> directives, what
+primitives would I need to provide so that other people can write modules for their favorite pet database?</p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2013/02/18/symmetric-constraint-learning/" data-toggle="tooltip"
+            data-placement="top" title="Symmetric constraint learning">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2013/10/04/rubber-duck-logging/" data-toggle="tooltip"
+            data-placement="top" title="Rubber-duck logging">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

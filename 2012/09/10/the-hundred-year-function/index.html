@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>The Hundred-Year function</title>
+  <meta name="description" content="What will programming languages look like one hundred years from now? Where will all of those wasted cycles end up going?">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2012/09/10/the-hundred-year-function/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="The Hundred-Year function">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2012/09/10/the-hundred-year-function/">
+  <meta property="og:description" content="What will programming languages look like one hundred years from now? Where will all of those wasted cycles end up going?">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="The Hundred-Year function">
+  <meta name="twitter:description" content="What will programming languages look like one hundred years from now? Where will all of those wasted cycles end up going?">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">The Hundred-Year function</h1>
+    
+    <p class="post-meta"><time datetime="2012-09-10T17:25:00-07:00" itemprop="datePublished">Sep 10, 2012</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/artificial-intelligence/">artificial intelligence</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>What will programming languages look like one hundred years from now? Where
+will all of those <a href="http://paulgraham.com/hundred.html">wasted cycles</a> end up going?</p>
+
+<p>I think it is safe to say that the programming language of the future, if it
+exists at all, will involve some kind of artificial intelligence. This post
+is about why I think that theorem provers will be standard in languages of the future.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">solve</span> <span class="o">::</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="kt">Bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Size</span> <span class="o">-&gt;</span> <span class="kt">Random</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="n">a</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>This simple function takes two arguments. The first is a predicate
+distinguishing between desirable (<code class="language-plaintext highlighter-rouge">True</code>) and undesirable (<code class="language-plaintext highlighter-rouge">False</code>) values for A.
+The second is a size restriction on A (e.g. number of bytes).</p>
+
+<p>The function returns a random value of A, if one exists, meeting two
+constraints:</p>
+
+<ol>
+  <li>It satisfies the predicate.</li>
+  <li>It is no larger than the size constraint.</li>
+</ol>
+
+<p>Also, the <code class="language-plaintext highlighter-rouge">solve</code> function is guaranteed to terminate whenever the predicate
+terminates.</p>
+
+<p>First I will try to convince you that the <code class="language-plaintext highlighter-rouge">solve</code> function is more important than any of your petty opinions about syntax, object-orientation, type theory, or macros. After that I will make a fool of myself by explaining how to build the <code class="language-plaintext highlighter-rouge">solve</code> function with today’s technology.</p>
+
+<h2 id="why-it-matters">Why it matters</h2>
+
+<p>It can find fix-points:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">c2f</span><span class="p">(</span><span class="n">temp</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">temp</span> <span class="o">*</span> <span class="mf">9.0</span> <span class="o">/</span> <span class="mi">5</span> <span class="o">+</span> <span class="mi">32</span>
+
+<span class="k">def</span> <span class="nf">is_fixpoint</span><span class="p">(</span><span class="n">temp</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">temp</span> <span class="o">==</span> <span class="n">c2f</span><span class="p">(</span><span class="n">temp</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="n">is_fixpoint</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span> <span class="c1"># outputs -40.0
+</span></code></pre></div></div>
+
+<p>It can invert functions:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">f2c</span><span class="p">(</span><span class="n">temp</span><span class="p">):</span>
+  <span class="k">return</span> <span class="p">(</span><span class="n">temp</span> <span class="o">-</span> <span class="mi">32</span><span class="p">)</span> <span class="o">*</span> <span class="mi">5</span> <span class="o">/</span> <span class="mf">9.0</span>
+
+<span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="k">lambda</span> <span class="n">fahr</span><span class="p">:</span> <span class="mf">37.0</span> <span class="o">==</span> <span class="n">f2c</span><span class="p">(</span><span class="n">fahr</span><span class="p">),</span> <span class="mi">8</span><span class="p">)</span> <span class="c1"># 100.0 IS hot!
+</span></code></pre></div></div>
+
+<p>It can solve <a href="http://projecteuler.net/problem=9">Project Euler</a> problems:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">is_pythagorean_triple</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">c</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">a</span><span class="o">*</span><span class="n">a</span> <span class="o">+</span> <span class="n">b</span><span class="o">*</span><span class="n">b</span> <span class="o">==</span> <span class="n">c</span><span class="o">*</span><span class="n">c</span>
+
+<span class="k">def</span> <span class="nf">is_solution</span><span class="p">(</span><span class="n">triple</span><span class="p">):</span>
+  <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">triple</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">3</span><span class="p">:</span> <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">if</span> <span class="nb">sum</span><span class="p">(</span><span class="n">triple</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1000</span><span class="p">:</span> <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">if</span> <span class="err">!</span><span class="n">is_pythagorean_triple</span><span class="p">(</span><span class="o">*</span><span class="n">triple</span><span class="p">):</span> <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">return</span> <span class="bp">True</span>
+
+<span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="n">is_solution</span><span class="p">,</span> <span class="mi">12</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>It can check that two functions are equal:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">the_obvious_max_subarray</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+  <span class="n">answer</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">end</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)):</span>
+      <span class="n">answer</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">answer</span><span class="p">,</span> <span class="nb">sum</span><span class="p">(</span><span class="n">A</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]))</span>
+  <span class="k">return</span> <span class="n">answer</span>
+
+<span class="k">def</span> <span class="nf">the_fast_max_subarray</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+  <span class="n">max_ending_here</span> <span class="o">=</span> <span class="n">max_so_far</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">A</span><span class="p">:</span>
+    <span class="n">max_ending_here</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">max_ending_here</span> <span class="o">+</span> <span class="n">x</span><span class="p">)</span>
+    <span class="n">max_so_far</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_so_far</span><span class="p">,</span> <span class="n">max_ending_here</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">max_so_far</span>
+
+<span class="k">def</span> <span class="nf">differentiates</span><span class="p">(</span><span class="nb">input</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">the_obvious_max_subarray</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="o">!=</span> <span class="n">the_fast_max_subarray</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span>
+
+<span class="c1"># Prints None if the two functions are equal for all
+#   input sequences of length 5 and smaller.
+# Otherwise prints a counter-example.
+</span><span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="n">differentiates</span><span class="p">,</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">5</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>So it’s useful for detecting the introduction of bugs when you are optimizing things.</p>
+
+<p>In fact, the solve function can find a more efficient implementation on your behalf.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">steps</span><span class="p">(</span><span class="n">algorithm</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
+  <span class="p">(</span><span class="n">_result</span><span class="p">,</span> <span class="n">steps</span><span class="p">)</span> <span class="o">=</span> <span class="n">eval_with_steps</span><span class="p">(</span><span class="n">algorithm</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span>
+  <span class="k">return</span> <span class="n">steps</span>
+
+<span class="k">def</span> <span class="nf">is_fast_max_subarray</span><span class="p">(</span><span class="n">algorithm</span><span class="p">):</span>
+  <span class="c1"># Check that algorithm is equivalent to the_obvious_max_subarray
+</span>  <span class="k">if</span> <span class="n">solve</span><span class="p">(</span><span class="k">lambda</span> <span class="nb">input</span><span class="p">:</span> <span class="n">the_obvious_max_subarray</span><span class="p">(</span><span class="nb">input</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">algorithm</span><span class="p">,</span> <span class="nb">input</span><span class="p">),</span> <span class="mi">4</span> <span class="o">*</span> <span class="mi">5</span><span class="p">):</span>
+    <span class="k">return</span> <span class="bp">False</span>
+  <span class="c1"># Check that algorithm is faster than the_obvious_max_subarray
+</span>  <span class="k">for</span> <span class="n">example</span> <span class="ow">in</span> <span class="n">example_inputs</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">steps</span><span class="p">(</span><span class="n">algorithm</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">steps</span><span class="p">(</span><span class="n">the_obvious_max_subarray</span><span class="p">,</span> <span class="nb">input</span><span class="p">):</span>
+      <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">return</span> <span class="bp">True</span>
+
+<span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="n">is_fast_max_subarray</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span> <span class="c1"># prints a function definition
+</span></code></pre></div></div>
+
+<p>The speed check is crude, but the idea is there.</p>
+
+<p>Keeping the size constraint reasonable prevents the <code class="language-plaintext highlighter-rouge">solve</code> function from just creating a giant table
+mapping inputs to outputs.</p>
+
+<p><a href="http://en.wikipedia.org/wiki/Curry%E2%80%93Howard_correspondence">Curry and Howard</a> tell us that
+programs and proofs are one and the same thing. If our <code class="language-plaintext highlighter-rouge">solve</code> function can generate programs, then it
+can also generate mathematical proofs.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">goldbach</span> <span class="o">=</span> <span class="n">parse</span><span class="p">(</span><span class="s">"forall a &gt; 2: exists b c: even(a) =&gt; prime(b) &amp;&amp; prime(c) &amp;&amp; b + c == a"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">proves_goldbach</span><span class="p">(</span><span class="n">proof</span><span class="p">):</span>
+  <span class="k">if</span> <span class="n">proof</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">!=</span> <span class="n">goldbach</span><span class="p">:</span>
+    <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">proof</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">proof</span><span class="p">[</span><span class="n">step</span><span class="p">].</span><span class="n">follows_from</span><span class="p">(</span><span class="n">proof</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="n">step</span><span class="p">]):</span>
+      <span class="k">return</span> <span class="bp">False</span>
+  <span class="k">return</span> <span class="bp">True</span>
+
+<span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="n">proves_goldbach</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>If the proof is ugly, we can decrease the search size, and we will get a
+more elegant proof.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">solve</code> function can find bugs:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">does_not_go_wrong</span><span class="p">(</span><span class="nb">input</span><span class="p">):</span>
+  <span class="n">result</span> <span class="o">=</span> <span class="nb">eval</span><span class="p">(</span><span class="n">my_program</span><span class="p">,</span> <span class="nb">input</span><span class="p">)</span>
+  <span class="k">return</span> <span class="ow">not</span> <span class="n">is_uncaught_exception</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+
+<span class="k">print</span> <span class="n">solve</span><span class="p">(</span><span class="n">does_not_go_wrong</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">solve</code> function will never get people to stop arguing, but it will at least change the dynamic
+vs static types argument from a pragmatic one to an artistic one.</p>
+
+<p>One last example:</p>
+
+<p>Test-driven development advocates writing tests which are sufficient to construct the missing
+parts of a program. So why write the program at all?</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">passes_tests</span><span class="p">(</span><span class="n">patches</span><span class="p">):</span>
+  <span class="k">return</span> <span class="n">unit_tests</span><span class="p">.</span><span class="k">pass</span><span class="p">(</span><span class="n">partial_program</span><span class="p">.</span><span class="k">with</span><span class="p">(</span><span class="n">patches</span><span class="p">))</span>
+
+<span class="n">patches</span> <span class="o">=</span> <span class="n">solve</span><span class="p">(</span><span class="n">passes_tests</span><span class="p">,</span> <span class="mi">10000</span><span class="p">)</span>
+<span class="k">if</span> <span class="n">patches</span><span class="p">:</span>
+  <span class="k">print</span> <span class="n">partial_program</span><span class="p">.</span><span class="k">with</span><span class="p">(</span><span class="n">patches</span><span class="p">)</span>
+<span class="k">else</span>
+  <span class="k">print</span> <span class="s">"Tests not passable within search space"</span>
+</code></pre></div></div>
+
+<p>In fact, unit_tests can be replaced with any assertion about the desired program: e.g. that it type
+checks under Hindley-Milner, that it terminates within a certain number of steps, that it does
+not deadlock within the first X cycles of the program’s execution, and so on.</p>
+
+<p>Are you excited yet? Programming in the future is awesome!</p>
+
+<h2 id="implementation">Implementation</h2>
+
+<p>Always start with the obvious approach:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="n">predicate</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+  <span class="k">for</span> <span class="n">num</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span> <span class="o">^</span> <span class="p">(</span><span class="n">size</span> <span class="o">*</span> <span class="mi">8</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+    <span class="n">val</span> <span class="o">=</span> <span class="n">decode</span><span class="p">(</span><span class="n">num</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">predicate</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
+      <span class="k">return</span> <span class="n">val</span>
+</code></pre></div></div>
+
+<p>Correct, but useless. If the predicate consisted of only one floating point operation, the Sequoia
+supercomputer would take 17 minutes to solve a mere 8 bytes.</p>
+
+<p>The complexity of <code class="language-plaintext highlighter-rouge">solve</code> is clear. The variable <code class="language-plaintext highlighter-rouge">num</code> can be non-deterministically chosen from the range in
+linear time (<code class="language-plaintext highlighter-rouge">size * 8</code>), decode takes linear time, and predicate takes polynomial time in most of
+our examples from above. So <code class="language-plaintext highlighter-rouge">solve</code> is usually in NP, and no worse than NP-complete as long as
+our predicate is in P.</p>
+
+<p>It’s a hard problem. Were you surprised? Or did you get suspicious when the programmers of the
+future started exemplifying godlike powers?<sup><a href="#godlike" name="1">1</a></sup></p>
+
+<p>Thankfully, a lot of work has been put into solving hard problems.</p>
+
+<p>Today’s sat solvers can solve problems with 10 million variables. That’s 1.2 megabytes of search
+space, which is large enough for almost all of the examples above, if we’re clever enough. (The
+Kadane example is the definite exception, since the predicate takes superpolynomial time.)</p>
+
+<p>The <a href="http://en.wikipedia.org/wiki/Cook%E2%80%93Levin_theorem">Cook-Levin theorem</a> gives us a
+procedure for writing the <code class="language-plaintext highlighter-rouge">solve</code> function more efficiently.</p>
+
+<ol>
+  <li>Imagine a large number of processors, each with its own memory, lined up and
+connected so that the output state of each processor and memory becomes the input state of the next processor and memory.
+The state of the entire assembly is determined solely by the state of the first processor. The state
+of the whole system is static.</li>
+  <li>Represent each (unchanging) bit in the assembly with a boolean variable, and generate constraints
+on those variables by examining the logic gates connecting the bits.</li>
+  <li>Assign values to some of the variables in a way that corresponds to the first processor containing
+the machine code of the predicate.</li>
+  <li>Likewise, assign values so that the accumulator register of the last processor contains the value <code class="language-plaintext highlighter-rouge">True</code>.</li>
+  <li>Apply a sat solver to the variables and their constraints.</li>
+  <li>Extrapolate a solution by examining the first processor’s total state.</li>
+</ol>
+
+<p>I call this approach “solving the interpreter trace” because the imaginary processors act as an
+interpreter for the predicate, and we ask the sat solver to trace out the processor execution.</p>
+
+<p>The approach is elegant, but it has three major problems:</p>
+
+<ol>
+  <li>The formula given to the sat solver is enormous, even for small predicates and input sizes. (It’s
+polynomial, but the coefficient is large.)</li>
+  <li>The formula is highly symmetrical, which means the sat solver will perform a lot of redundant computation.</li>
+  <li>The meaning of bits in later processors is highly dependent on the value of bits in earlier
+processors (especially if the predicate starts off with a loop). This will force our sat solver to
+work a problem from beginning to end, even when a different order (such as end to beginning) would
+be more intelligent.</li>
+</ol>
+
+<p>We can get rid of these problems if we compile our predicate directly into a boolean formula.
+Compilation is easy enough if our predicate contains neither loops nor conditionals.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">isReadableAndWriteable</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="n">y</span> <span class="o">=</span> <span class="n">x</span> <span class="o">&amp;</span> <span class="mi">4</span>
+  <span class="n">z</span> <span class="o">=</span> <span class="n">x</span> <span class="o">&amp;</span> <span class="mi">2</span>
+  <span class="n">a</span> <span class="o">=</span> <span class="n">y</span> <span class="o">==</span> <span class="mi">4</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="n">z</span> <span class="o">==</span> <span class="mi">2</span>
+  <span class="k">return</span> <span class="n">a</span> <span class="o">&amp;&amp;</span> <span class="n">b</span>
+</code></pre></div></div>
+
+<p>becomes</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="n">y0</span> <span class="o">==</span> <span class="n">x0</span> <span class="o">&amp;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y1</span> <span class="o">==</span> <span class="n">x1</span> <span class="o">&amp;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y2</span> <span class="o">==</span> <span class="n">x2</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="n">z0</span> <span class="o">==</span> <span class="n">x0</span> <span class="o">&amp;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">z1</span> <span class="o">==</span> <span class="n">x1</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">z2</span> <span class="o">==</span> <span class="n">x2</span> <span class="o">&amp;</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="p">((</span><span class="n">y0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y1</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">y2</span> <span class="o">==</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="n">b</span> <span class="o">==</span> <span class="p">((</span><span class="n">z0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">z1</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">z2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&amp;</span>
+<span class="n">a</span> <span class="o">&amp;&amp;</span> <span class="n">b</span>
+</code></pre></div></div>
+
+<p>Actually conditionals aren’t that hard either</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">predicate</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+  <span class="n">b</span> <span class="o">=</span> <span class="n">isEven</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">b</span><span class="p">:</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">x</span> <span class="o">&amp;</span> <span class="mi">7</span>
+  <span class="k">else</span><span class="p">:</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">x</span> <span class="o">&amp;</span> <span class="mi">2</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">z</span> <span class="o">&lt;&lt;</span> <span class="mi">1</span>
+  <span class="k">return</span> <span class="n">w</span> <span class="o">&lt;</span> <span class="mi">3</span>
+</code></pre></div></div>
+
+<p>becomes</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="n">b</span> <span class="o">==</span> <span class="p">(</span><span class="n">x0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="n">b</span> <span class="o">-&gt;</span> <span class="p">((</span><span class="n">w0</span> <span class="o">==</span> <span class="p">(</span><span class="n">x0</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">w1</span> <span class="o">==</span> <span class="p">(</span><span class="n">x1</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">w2</span> <span class="o">==</span> <span class="p">(</span><span class="n">x2</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">))))</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="o">~</span><span class="n">b</span> <span class="o">-&gt;</span> <span class="p">((</span><span class="n">z0</span> <span class="o">==</span> <span class="p">(</span><span class="n">x0</span> <span class="o">&amp;</span> <span class="mi">0</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">z1</span> <span class="o">==</span> <span class="p">(</span><span class="n">x1</span> <span class="o">&amp;</span> <span class="mi">1</span><span class="p">))</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">z2</span> <span class="o">==</span> <span class="p">(</span><span class="n">x2</span> <span class="o">&amp;</span> <span class="mi">0</span><span class="p">))))</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="o">~</span><span class="n">b</span> <span class="o">-&gt;</span> <span class="p">((</span><span class="n">w0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">w1</span> <span class="o">==</span> <span class="n">z0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">w2</span> <span class="o">==</span> <span class="n">z1</span><span class="p">)))</span> <span class="o">&amp;</span>
+<span class="p">(</span><span class="n">w2</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">w1</span> <span class="o">==</span> <span class="mi">0</span> <span class="o">|</span> <span class="n">w0</span> <span class="o">==</span> <span class="mi">0</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>A sat solver would immediately assign <code class="language-plaintext highlighter-rouge">w2</code> the value <code class="language-plaintext highlighter-rouge">0</code>. If we were solving over an interpretational
+trace, <code class="language-plaintext highlighter-rouge">w2</code> wouldn’t be a single variable, but would be one of two variables depending on whether
+<code class="language-plaintext highlighter-rouge">b</code> was <code class="language-plaintext highlighter-rouge">True</code> or <code class="language-plaintext highlighter-rouge">False</code>.</p>
+
+<p>By compiling the predicate, we have enabled the solver to work from end to beginning (if it so chooses).</p>
+
+<p>Can we handle loops?</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">is_palindrome</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+  <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+  <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span> <span class="k">return</span> <span class="bp">False</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+  <span class="k">return</span> <span class="bp">True</span>
+</code></pre></div></div>
+
+<p>One approach is to unroll the loop a finite number of times.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">is_palindrome</span><span class="p">(</span><span class="nb">str</span><span class="p">):</span>
+  <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+  <span class="n">j</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+  <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">str</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span> <span class="k">return</span> <span class="bp">False</span>
+    <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+    <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+      <span class="k">if</span> <span class="nb">str</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span> <span class="k">return</span> <span class="bp">False</span>
+      <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+      <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+      <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+        <span class="k">if</span> <span class="nb">str</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">str</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span> <span class="k">return</span> <span class="bp">False</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">j</span> <span class="o">-=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">j</span><span class="p">:</span>
+          <span class="n">_longer_loop_needed</span> <span class="o">=</span> <span class="bp">True</span>
+          <span class="n">i</span> <span class="o">=</span> <span class="n">arbitrary_value</span><span class="p">()</span> <span class="c1"># in case rest of function depends on i or j
+</span>          <span class="n">j</span> <span class="o">=</span> <span class="n">arbitrary_value</span><span class="p">()</span> <span class="c1"># (It doesn't in this example.)
+</span>  <span class="k">return</span> <span class="bp">True</span>
+</code></pre></div></div>
+
+<p>With branching and conditionals, we are turing complete. Function calls can be in-lined up until
+recursion. Tail recursive calls can be changed to while loops, and the rest can be reified as
+loops around stack objects with explicit push and pop operations. These stack objects will
+introduce symmetry into our sat formulas, but at least it will be contained.</p>
+
+<p>When solving, we assume the loops make very few iterations, and increase our unroll depth as
+that assumption is violated. The solver might then look something like this:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">solve</span><span class="p">(</span><span class="n">predicate</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+  <span class="n">unroll_count</span> <span class="o">=</span> <span class="mi">1</span>
+  <span class="n">sat_solver</span> <span class="o">=</span> <span class="n">SatSolver</span><span class="p">()</span>
+  <span class="n">limit</span> <span class="o">=</span> <span class="n">max_unroll_count</span><span class="p">(</span><span class="n">predicate</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span>
+  <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+    <span class="n">unrolled</span> <span class="o">=</span> <span class="n">unroll_loop</span><span class="p">(</span><span class="n">predicate</span><span class="p">,</span> <span class="n">unroll_count</span><span class="p">)</span>
+    <span class="n">formula</span> <span class="o">=</span> <span class="nb">compile</span><span class="p">(</span><span class="n">unrolled</span><span class="p">)</span>
+    <span class="n">sat_solver</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="n">formula</span><span class="p">)</span>
+    <span class="n">sat_solver</span><span class="p">.</span><span class="n">push</span><span class="p">(</span><span class="s">"_longer_loop_needed == 0"</span><span class="p">)</span>
+    <span class="n">sol</span> <span class="o">=</span> <span class="n">sat_solver</span><span class="p">.</span><span class="n">solve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">sol</span><span class="p">:</span> <span class="k">return</span> <span class="n">sol</span>
+    <span class="n">sat_solver</span><span class="p">.</span><span class="n">pop</span><span class="p">()</span>
+    <span class="n">sol</span> <span class="o">=</span> <span class="n">sat_solver</span><span class="p">.</span><span class="n">solve</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">sol</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span> <span class="k">return</span> <span class="bp">None</span> <span class="c1"># even unrolling more iterations won't help us
+</span>    <span class="n">sat_solver</span><span class="p">.</span><span class="n">pop</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">unroll_count</span> <span class="o">==</span> <span class="n">limit</span><span class="p">:</span> <span class="k">return</span> <span class="bp">None</span>
+    <span class="n">unroll_count</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">unroll_count</span> <span class="o">*</span> <span class="mi">2</span><span class="p">,</span> <span class="n">limit</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">max_unroll_count</code> does static analysis to figure out the maximum number of
+unrolls that are needed. The number of unrolls will either be a constant
+(and so can be found out by doing constant reduction within the predicate), or it
+will somehow depend on the size of the predicate argument (and so an upper bound can be found by
+doing inference on the predicate).</p>
+
+<p>The solver is biased toward finding solutions that use fewer loop iterations, since each loop
+iteration sets another boolean variable to <code class="language-plaintext highlighter-rouge">1</code>, and thus cuts the solution space down by half.
+If the solver finds a solution, then we return it. If not, then we try again, this time allowing
+<code class="language-plaintext highlighter-rouge">_longer_loop_needed</code> to be true. If it <strong>still</strong> can’t find a solution, then we know <strong>no</strong> solution
+exists, since <code class="language-plaintext highlighter-rouge">i</code> and <code class="language-plaintext highlighter-rouge">j</code> were set to arbitrary values. By “arbitrary”, I mean that, at compilation
+time, no constraints will connect the later usages of <code class="language-plaintext highlighter-rouge">i</code> and <code class="language-plaintext highlighter-rouge">j</code> (there are none in this example)
+with the earlier usages.</p>
+
+<p>I admit that this approach is ugly, but the alternative, solving an interpreter trace, is even more
+expensive. The hacks are worth it, at least until somebody proves P == NP.</p>
+
+<p>Some of the examples I gave in the first section used eval. Partial evaluation
+techniques can be used to make these examples more tractable.</p>
+
+<p>I’ve only talked about sat solvers. You can probably get better results with an smt solver or a
+domain-specific constraint solver.</p>
+
+<p>In thinking about this problem, I’ve realized that there are several parallels between compilers
+and sat solvers. Constant reduction in a compiler does the same work as the unit clause heuristic
+in a sat solver. Dead code removal corresponds to early termination. Partial evaluation reduces
+the need for symmetry breaking. Memoization corresponds to clause learning. Is there a name for
+this correspondance? Do compilers have an analogue for the pure symbol heuristic? Do sat solvers
+have an analogue for attribute grammars?</p>
+
+<h2 id="today">Today</h2>
+
+<p>If you want to use languages which are on the evolutionary path toward the language of the future,
+you should consider C# 4.0, since it is the only mainstream language I know of that comes with
+a built-in <a href="http://msdn.microsoft.com/en-us/library/dd264808.aspx">theorem prover</a>.</p>
+
+<p>Update (2013-11-24):</p>
+
+<p>I am happy to report that I am not alone in having these ideas. “Search-assisted programming”,
+“solver aided languages”, “computer augmented programming”, and “satisfiability based inductive
+program synthesis” are some of the
+names used to describe these techniques. <a href="http://people.csail.mit.edu/emina/">Emily Torlak</a> has
+developed an exciting language called
+<a href="https://excape.cis.upenn.edu/documents/rosette_Emina.pdf">Rosette</a>, which is a dsl for creating
+solver aided languages. <a href="http://www.cs.berkeley.edu/~bodik/">Ras Bodik</a> has also done much work
+combining constraint solvers and programming languages. The <a href="https://excape.cis.upenn.edu/">ExCAPE</a>
+project focuses on program synthesis. Thanks to <a href="http://www.jameskoppel.com/">Jimmy Koppel</a> for
+letting me know these people exist.</p>
+
+<hr />
+
+<p><sup><a href="#1" name="godlike">1</a></sup>: Even many computer scientists do not seem to appreciate how different the world would be if we
+could solve NP-complete problems efficiently. <strong>I have heard it said, with a straight face, that a
+proof of P = NP would be important because it would let airlines schedule their flights better, or
+shipping companies pack more boxes in their trucks!</strong> One person who did understand was Gödel. In
+his celebrated 1956 letter to von Neumann, in which he first raised the P versus NP question,
+Gödel says that a linear or quadratic-time procedure for what we now call NP-complete problems
+would have “consequences of the greatest magnitude.” For such a procedure “would clearly indicate
+that, despite the unsolvability of the Entscheidungsproblem, the mental effort of the mathematician
+in the case of yes-or-no questions could be completely replaced by machines.” But it would indicate
+even more. If such a procedure existed, then we could quickly find the smallest Boolean circuits
+that output (say) a table of historical stock market data, or the human genome, or the complete
+works of Shakespeare. It seems entirely conceivable that, by analyzing these circuits, we could make
+an easy fortune on Wall Street, or retrace evolution, or even generate Shakespeare’s 38th play. For
+broadly speaking, that which we can compress we can understand, and that which we can understand we
+can predict. – <a href="http://www.scottaaronson.com/papers/npcomplete.pdf">Scott Aaronson</a></p>
+
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2008/10/18/foreach-mutation/" data-toggle="tooltip"
+            data-placement="top" title="Foreach mutation">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2013/02/18/symmetric-constraint-learning/" data-toggle="tooltip"
+            data-placement="top" title="Symmetric constraint learning">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

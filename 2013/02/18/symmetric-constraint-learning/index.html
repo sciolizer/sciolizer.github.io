@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Symmetric constraint learning</title>
+  <meta name="description" content="Suppose I have the following graph:">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2013/02/18/symmetric-constraint-learning/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Symmetric constraint learning">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2013/02/18/symmetric-constraint-learning/">
+  <meta property="og:description" content="Suppose I have the following graph:">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Symmetric constraint learning">
+  <meta name="twitter:description" content="Suppose I have the following graph:">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Symmetric constraint learning</h1>
+    
+    <p class="post-meta"><time datetime="2013-02-18T17:24:20-08:00" itemprop="datePublished">Feb 18, 2013</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/artificial-intelligence/">artificial intelligence</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/constraint-satisfaction/">constraint satisfaction</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/machine-learning/">machine learning</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>Suppose I have the following graph:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  /- B -\        /- G -\
+ /       \      /       \
+A -- C -- E -- F -- H -- J
+ \       /      \       /
+  \- D -/        \- I -/
+</code></pre></div></div>
+
+<p>And I’m trying to find a two-coloring for it. (i.e. I want to color each of the nodes black or white in such a way that directly connected nodes have opposite colors.)
+Obviously any realistic constraint solver is going to solve this problem in linear time, since any assignment causes a propagation to the rest of the graph.
+(e.g. <code class="language-plaintext highlighter-rouge">A</code> being black causes <code class="language-plaintext highlighter-rouge">B</code>, <code class="language-plaintext highlighter-rouge">C</code>, and <code class="language-plaintext highlighter-rouge">D</code> to be white which causes <code class="language-plaintext highlighter-rouge">E</code> to be black, <code class="language-plaintext highlighter-rouge">F</code> to be white, <code class="language-plaintext highlighter-rouge">G</code>, <code class="language-plaintext highlighter-rouge">H</code>, and <code class="language-plaintext highlighter-rouge">I</code> to be black, and
+<code class="language-plaintext highlighter-rouge">J</code> to be white.)</p>
+
+<p>But suppose (since this is just an illustration) my constraint solver doesn’t maintain arc consistency, but it <em>does</em> do some kind of
+constraint learning. Also, suppose that I already know some of the symmetry in this problem.
+In particular, I know that <code class="language-plaintext highlighter-rouge">[A, B, C, D, E]</code> is symmetric with <code class="language-plaintext highlighter-rouge">[F, G, H, I, J]</code>.
+(The constraint solver doesn’t have to discover this symmetry; I know it in advance.)</p>
+
+<p>The constraint solver might learn at some point that <code class="language-plaintext highlighter-rouge">A == E</code>, because it combines the constraint <code class="language-plaintext highlighter-rouge">A != B</code> with <code class="language-plaintext highlighter-rouge">B != E</code>.
+It would be a shame if the constraint solver later also learned that <code class="language-plaintext highlighter-rouge">F == J</code>. It would be nice if it could learn
+<code class="language-plaintext highlighter-rouge">F == J</code> at the <em>same time</em> that it learns <code class="language-plaintext highlighter-rouge">A == E</code>, since I have told it about the symmetry of the problem.</p>
+
+<p>Notice that the learning is valuable even though the two halves of the problem have different assignments. (If <code class="language-plaintext highlighter-rouge">A</code> is black, then <code class="language-plaintext highlighter-rouge">F</code> is white.)</p>
+
+<p>How can a constraint solver make these kind of inferences?</p>
+
+<p>Here’s my current solution:</p>
+
+<p>A constraint satisfaction problem is a collection of variables and constraints. We declare an ordered subset <code class="language-plaintext highlighter-rouge">X</code> of variables as
+isomorphic to a subset <code class="language-plaintext highlighter-rouge">Y</code> of variables if for every constraint involving only variables in X there is an identical constraint involving the
+corresponding variables in <code class="language-plaintext highlighter-rouge">Y</code>. (Constraints involving variables both in <code class="language-plaintext highlighter-rouge">X</code> and around <code class="language-plaintext highlighter-rouge">X</code> are not required to have a corresponding constraint.)</p>
+
+<p>It follows that if <code class="language-plaintext highlighter-rouge">X</code> and <code class="language-plaintext highlighter-rouge">Y</code> are isomorphic, then their corresponding subsets must also be isomorphic.</p>
+
+<p>Whenever a constraint solver learns a constraint, it can add all of the isomorphic constraints to its collection of learned constraints.
+There might even be a space optimization here, if I can find an appropriate lazy data structure, e.g. by allowing “abstract” constraints
+in the solver’s collection of learned constraints. The hard part is figuring out how to do watched literals.</p>
+
+<p>Has this problem already been tackled?</p>
+
+<p>Original post:
+<a href="https://www.reddit.com/r/artificial/comments/18rttb/symmetric_constraint_learning/">https://www.reddit.com/r/artificial/comments/18rttb/symmetric_constraint_learning/</a></p>
+
+<p>Update (2018/04/04):</p>
+
+<p><a href="https://www.cs.cmu.edu/afs/cs/project/jair/pub/volume21/dixon04a-html/node1.html">ZAP</a> appears to do
+this.</p>
+
+<p>Also <a href="http://www.aaai.org/Papers/AAAI/2004/AAAI04-009.pdf">Implementing a Generalized Version of Resolution</a></p>
+
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2012/09/10/the-hundred-year-function/" data-toggle="tooltip"
+            data-placement="top" title="The Hundred-Year function">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2013/05/06/a-data-representation-language/" data-toggle="tooltip"
+            data-placement="top" title="A data representation language">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

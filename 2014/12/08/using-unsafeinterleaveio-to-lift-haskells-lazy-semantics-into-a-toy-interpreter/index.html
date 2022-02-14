@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Using unsafeInterleaveIO to lift haskell&#39;s lazy semantics into a toy interpreter</title>
+  <meta name="description" content="The main challenge of writing a lazy interpreter is sharing structure: in particular, making sure that an individual closure is not evaluated more than once. Obvious but tedious solutions in Haskell include using IORefs and monadic state. The interpreter below uses a completely different tactic: exploiting unsafeInterleaveIO. All function arguments are evaluated “right away”, but in the context of an unsafeInterleaveIO (so, in fact, they are actually not evaluated right away). With this hack, we get to write an interpreter which looks like an interpreter for a strict functional language, but actually behaves lazily (by lifting haskell’s own lazy semantics into our interpreter).">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2014/12/08/using-unsafeinterleaveio-to-lift-haskells-lazy-semantics-into-a-toy-interpreter/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Using unsafeInterleaveIO to lift haskell&#39;s lazy semantics into a toy interpreter">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2014/12/08/using-unsafeinterleaveio-to-lift-haskells-lazy-semantics-into-a-toy-interpreter/">
+  <meta property="og:description" content="The main challenge of writing a lazy interpreter is sharing structure: in particular, making sure that an individual closure is not evaluated more than once. Obvious but tedious solutions in Haskell include using IORefs and monadic state. The interpreter below uses a completely different tactic: exploiting unsafeInterleaveIO. All function arguments are evaluated “right away”, but in the context of an unsafeInterleaveIO (so, in fact, they are actually not evaluated right away). With this hack, we get to write an interpreter which looks like an interpreter for a strict functional language, but actually behaves lazily (by lifting haskell’s own lazy semantics into our interpreter).">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Using unsafeInterleaveIO to lift haskell&#39;s lazy semantics into ...">
+  <meta name="twitter:description" content="The main challenge of writing a lazy interpreter is sharing structure: in particular, making sure that an individual closure is not evaluated more than once. Obvious but tedious solutions in Haskel...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Using unsafeInterleaveIO to lift haskell&#39;s lazy semantics into a toy interpreter</h1>
+    
+    <p class="post-meta"><time datetime="2014-12-08T17:16:09-08:00" itemprop="datePublished">Dec 8, 2014</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/programming-languages/">programming languages</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>The main challenge of writing a lazy interpreter is sharing structure: in
+particular, making sure that an individual closure is not evaluated more
+than once. Obvious but tedious solutions in Haskell include using <code class="language-plaintext highlighter-rouge">IORef</code>s and monadic
+state. The interpreter below uses a completely different tactic: exploiting
+<code class="language-plaintext highlighter-rouge">unsafeInterleaveIO</code>. All function arguments are evaluated “right away”, but in the
+context of an <code class="language-plaintext highlighter-rouge">unsafeInterleaveIO</code> (so, in fact, they are actually not evaluated
+right away). With this hack, we get to write an interpreter which <em>looks</em>
+like an interpreter for a strict functional language, but actually
+behaves lazily (by lifting haskell’s own lazy semantics into our interpreter).</p>
+
+<p><a href="https://github.com/sciolizer/lazy-interpreter/blob/master/Interpreter.hs">Interpreter.hs</a></p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2014/04/28/partial-evaluation-of-fat-languages/" data-toggle="tooltip"
+            data-placement="top" title="Partial evaluation of fat languages">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2015/03/01/automatic-redis/" data-toggle="tooltip"
+            data-placement="top" title="Automatic redis through static differentiation">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

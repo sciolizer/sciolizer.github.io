@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Rubber-duck logging</title>
+  <meta name="description" content="I often ask myself, “How can I be a more productive software engineer?” I can answer this question better if I break it down into pieces.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2013/10/04/rubber-duck-logging/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Rubber-duck logging">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2013/10/04/rubber-duck-logging/">
+  <meta property="og:description" content="I often ask myself, “How can I be a more productive software engineer?” I can answer this question better if I break it down into pieces.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Rubber-duck logging">
+  <meta name="twitter:description" content="I often ask myself, “How can I be a more productive software engineer?” I can answer this question better if I break it down into pieces.">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Rubber-duck logging</h1>
+    
+    <p class="post-meta"><time datetime="2013-10-04T18:51:20-07:00" itemprop="datePublished">Oct 4, 2013</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/productivity/">productivity</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>I often ask myself, “How can I be a more productive software engineer?” I can answer this question better if I break it down into pieces.</p>
+
+<p>In my day to day work, there are approximately five things that take up most of my time. Ordered from most time consuming to least time consuming, they are:</p>
+
+<ol>
+  <li>Debugging</li>
+  <li>Writing code</li>
+  <li>Helping other people</li>
+  <li>Learning and evaluating libraries, frameworks, and tools</li>
+  <li>Designing solutions</li>
+</ol>
+
+<p>So the obvious place to start is reducing my time spent debugging. The best way to reduce debugging time is to avoid doing it in the first place, and I’ve accomplished this a number of ways. From best to worst:</p>
+
+<ol>
+  <li>Using languages that have very strong type systems (e.g. haskell)</li>
+  <li>Using smart editors (e.g. IntelliJ) that give me immediate feedback when I make mistakes</li>
+  <li>Writing code in short, quick iterations instead of large batches</li>
+  <li>Writing unit tests</li>
+</ol>
+
+<p>Despite using all these approaches, debugging <em>still</em> takes up more of my time than the actual writing of the code. The only exception has been haskell, but I don’t use haskell at work.</p>
+
+<p>My approaches are fairly standard, but a few days ago I discovered an approach that I haven’t heard described elsewhere. I was practicing the habit of “noticing when I’m surprised”. Being frequently surprised is bad because it means I’m not learning. I noticed that sometimes when I ran my programs, they did not behave the way I expected. i.e. I was surprised.</p>
+
+<p>How could I stop being surprised? I decided to start documenting my surprises. I created a document with a table of two columns. In the left column I would record each surprise: what I did, what I expected to happen, and what actually happened. In the right column I would record the resolution (once I had finished debugging it), and why my expectations were wrong in the first place.</p>
+
+<p>I was hoping that after doing this for a few days, I would have enough data to find the persistent errors in my thinking. But something pleasant happened before I got that far!</p>
+
+<p>I have not been very disciplined about this. I have only remembered to document my surprises twice since I started this experiment, and I almost missed the second one. I was about to bust out the printlns and the debugger before I caught myself. Although it felt tedious, I opened up my document and wrote down what I did, what I expected to happen, and what actually happened. When I added that last part, it suddenly hit me what my mistake was. No debugging necessary! Apparently the very act of articulating the difference between my expectations and reality was sufficient for me to recognize the error in my thinking (and my coding).</p>
+
+<p>Perhaps it was a fluke. Perhaps the reason would have come to me anyway. But I am now definitely motivated to continue this experiment.</p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2013/05/06/a-data-representation-language/" data-toggle="tooltip"
+            data-placement="top" title="A data representation language">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2013/11/23/automatic-redis/" data-toggle="tooltip"
+            data-placement="top" title="Automatic redis, part one: inserts and cache key extraction">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

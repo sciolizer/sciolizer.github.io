@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Automatic redis through static differentiation</title>
+  <meta name="description" content="A new project, “Incremental λ-Calculus”, obviates my previous posts on automatic redis. The team has created an algorithm, called static differentiation, which performs a source to source translation on functions in the simply typed lambda calculs. The resulting function takes twice as many arguments as the previous program, with every other argument being a diff, or derivative, on the previous argument. When further optimizations are applied to the source, such as constant reduction and dead code elimination, the non-derivative arguments can sometimes be removed entirely. Here is an example from the paper:">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2015/03/01/automatic-redis/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Automatic redis through static differentiation">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2015/03/01/automatic-redis/">
+  <meta property="og:description" content="A new project, “Incremental λ-Calculus”, obviates my previous posts on automatic redis. The team has created an algorithm, called static differentiation, which performs a source to source translation on functions in the simply typed lambda calculs. The resulting function takes twice as many arguments as the previous program, with every other argument being a diff, or derivative, on the previous argument. When further optimizations are applied to the source, such as constant reduction and dead code elimination, the non-derivative arguments can sometimes be removed entirely. Here is an example from the paper:">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Automatic redis through static differentiation">
+  <meta name="twitter:description" content="A new project, “Incremental λ-Calculus”, obviates my previous posts on automatic redis. The team has created an algorithm, called static differentiation, which performs a source to source translati...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Automatic redis through static differentiation</h1>
+    
+    <p class="post-meta"><time datetime="2015-03-01T15:29:00-08:00" itemprop="datePublished">Mar 1, 2015</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/flexible-competence/">flexible competence</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/automatic-redis/">automatic redis</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>A new project,
+“<a href="http://www.informatik.uni-marburg.de/~pgiarrusso/ILC/">Incremental λ-Calculus</a>”,
+obviates my previous posts on <a href="/blog/categories/automatic-redis">automatic redis</a>.
+The team has created an algorithm, called static differentiation, which performs a
+source to source translation on functions in the simply typed lambda calculs.
+The resulting function takes twice as many arguments as the previous program, with every
+other argument being a diff, or derivative, on the previous argument. When further
+optimizations are applied to the source, such as constant reduction and dead code elimination,
+the non-derivative
+arguments can sometimes be removed entirely. Here is an example from the paper:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">MultiSet</span> <span class="o">=</span> <span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Nat</span>
+
+<span class="cd">-- | grandTotal counts the number of elements in each set and adds them</span>
+<span class="n">grandTotal</span> <span class="o">::</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">Nat</span>
+<span class="n">grandTotal</span> <span class="n">xs</span> <span class="n">ys</span> <span class="o">=</span> <span class="n">fold</span> <span class="p">(</span><span class="o">+</span><span class="p">)</span> <span class="mi">0</span> <span class="p">(</span><span class="n">merge</span> <span class="n">xs</span> <span class="n">ys</span><span class="p">)</span> <span class="kr">where</span>
+
+<span class="c1">-- Imported:</span>
+<span class="n">fold</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">Nat</span>
+<span class="p">(</span><span class="o">+</span><span class="p">)</span> <span class="o">::</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span>
+<span class="mi">0</span> <span class="o">::</span> <span class="kt">Nat</span>
+<span class="n">merge</span> <span class="o">::</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span>
+</code></pre></div></div>
+
+<p>After static differentiation, the code becomes:<sup><a href="#imprecise" name="1">1</a></sup></p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- The derivative of a natural number is an integer, since</span>
+<span class="c1">-- the natural number can either increase or decrease.</span>
+<span class="kr">type</span> <span class="kt">Nat'</span> <span class="o">=</span> <span class="kt">Int</span>
+
+<span class="kr">type</span> <span class="kt">MultiSet'</span> <span class="o">=</span> <span class="kt">Map</span> <span class="kt">String</span> <span class="kt">Nat'</span>
+
+<span class="n">grandTotal'</span> <span class="o">::</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span>
+<span class="n">grandTotal'</span> <span class="n">xs</span> <span class="n">xs'</span> <span class="n">ys</span> <span class="n">ys'</span> <span class="o">=</span>
+  <span class="n">fold'</span> <span class="p">(</span><span class="o">+</span><span class="p">)</span> <span class="p">(</span><span class="o">+</span><span class="n">'</span><span class="p">)</span> <span class="mi">0</span> <span class="p">(</span><span class="n">derive</span> <span class="mi">0</span><span class="p">)</span> <span class="p">(</span><span class="n">merge</span> <span class="n">xs</span> <span class="n">ys</span><span class="p">)</span> <span class="p">(</span><span class="n">merge'</span> <span class="n">xs</span> <span class="n">dxs</span> <span class="n">ys</span> <span class="n">dys</span><span class="p">)</span> <span class="kr">where</span>
+
+<span class="c1">-- Imported:</span>
+<span class="n">fold'</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span><span class="p">)</span>
+      <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span><span class="p">)</span>
+      <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span>
+      <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span>
+      <span class="o">-&gt;</span> <span class="kt">Nat'</span>
+<span class="p">(</span><span class="o">+</span><span class="p">)</span> <span class="o">::</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat</span>
+<span class="p">(</span><span class="o">+</span><span class="n">'</span><span class="p">)</span> <span class="o">::</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span> <span class="o">-&gt;</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span>
+<span class="mi">0</span> <span class="o">::</span> <span class="kt">Nat</span>
+<span class="n">derive</span> <span class="o">::</span> <span class="kt">Nat</span> <span class="o">-&gt;</span> <span class="kt">Nat'</span>
+<span class="n">merge</span> <span class="o">::</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span>
+<span class="n">merge'</span> <span class="o">::</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">MultiSet</span>
+</code></pre></div></div>
+
+<p>When optimizations are applied, <code class="language-plaintext highlighter-rouge">grandTotal'</code> becomes the implementation
+that a programmer would have written:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">grandTotal'</span> <span class="o">::</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">Int</span>
+<span class="n">grandTotal'</span> <span class="n">xs'</span> <span class="n">ys'</span> <span class="o">=</span> <span class="n">fold'</span> <span class="p">(</span><span class="o">+</span><span class="p">)</span> <span class="mi">0</span> <span class="p">(</span><span class="n">merge'</span> <span class="n">xs'</span> <span class="n">ys'</span><span class="p">)</span>
+
+<span class="c1">-- Imported:</span>
+<span class="n">fold'</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Int</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="o">-&gt;</span> <span class="kt">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">Int</span>
+<span class="p">(</span><span class="o">+</span><span class="p">)</span> <span class="o">::</span> <span class="kt">Int</span> <span class="o">-&gt;</span> <span class="kt">Int</span> <span class="o">-&gt;</span> <span class="kt">Int</span>
+<span class="mi">0</span> <span class="o">::</span> <span class="kt">Int</span>
+<span class="n">merge'</span> <span class="o">::</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span> <span class="o">-&gt;</span> <span class="kt">MultiSet'</span>
+</code></pre></div></div>
+
+<p>In this case, the resulting <code class="language-plaintext highlighter-rouge">grandTotal'</code> makes no reference to the original multisets at all.
+The authors of the paper call this “self-maintainability”, by analogy to self-maintainable
+views in databases.</p>
+
+<p>The problem of infering redis update operations from database update operations, then,
+is simply a matter of differentiating and then optimizing the cache schema. (“Cache schema” is
+the mapping from redis keys to the database queries that populate those keys.)
+The mappings whose derivatives are self-maintainable can be translated into redis commands.</p>
+
+<p>Here is the source transformation described in the paper:</p>
+
+<p>File C:/Users/joshball/git/joshua.ball.name/downloads/code/static-differentiation/Differentiate.hs could not be found</p>
+
+<p>Returning to an example from the <a href="/blog/2013/11/23/automatic-redis/">first post</a>:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">userIds</span> <span class="o">::</span> <span class="kt">RedisSet</span>
+<span class="n">userIds</span> <span class="o">=</span> <span class="n">setToRedisSet</span> <span class="p">(</span><span class="n">mapProjection</span> <span class="n">userId</span> <span class="p">(</span><span class="n">dbTableToSet</span> <span class="n">usersTable</span><span class="p">))</span>
+
+<span class="n">setToRedisSet</span> <span class="o">::</span> <span class="kt">Set</span> <span class="kt">Id</span> <span class="o">-&gt;</span> <span class="kt">RedisSet</span>
+<span class="n">mapProjection</span> <span class="o">::</span> <span class="p">(</span><span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Set</span> <span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Set</span> <span class="kt">Id</span>
+<span class="n">userId</span> <span class="o">::</span> <span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Id</span>
+<span class="n">dbTableToSet</span> <span class="o">::</span> <span class="kt">DbTable</span> <span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Set</span> <span class="kt">User</span>
+<span class="n">usersTable</span> <span class="o">::</span> <span class="kt">DbTable</span> <span class="kt">User</span>
+</code></pre></div></div>
+
+<p>The derivative is</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">userIds'</span> <span class="o">::</span> <span class="kt">RedisSet'</span>
+<span class="n">userIds'</span> <span class="o">=</span> <span class="n">setToRedisSet'</span> <span class="p">(</span><span class="n">mapProjection</span> <span class="n">userId</span> <span class="p">(</span><span class="n">dbTableToSet</span> <span class="n">usersTable</span><span class="p">))</span> <span class="p">(</span><span class="n">mapProjection'</span> <span class="n">userId</span> <span class="n">userId'</span> <span class="p">(</span><span class="n">dbTableToSet</span> <span class="n">usersTable</span><span class="p">)</span> <span class="p">(</span><span class="n">dbTableToSet'</span> <span class="n">usersTable</span> <span class="n">usersTable'</span><span class="p">))</span>
+
+<span class="n">setToRedisSet'</span> <span class="o">::</span> <span class="kt">Set</span> <span class="kt">Id</span> <span class="o">-&gt;</span> <span class="kt">Set'</span> <span class="kt">Id</span> <span class="kt">Id'</span> <span class="o">-&gt;</span> <span class="kt">RedisSet'</span>
+
+<span class="n">mapProjection</span>  <span class="o">::</span> <span class="p">(</span><span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Id</span><span class="p">)</span> <span class="o">-&gt;</span>                           <span class="kt">Set</span> <span class="kt">User</span> <span class="o">-&gt;</span>                    <span class="kt">Set</span> <span class="kt">Id</span>
+<span class="n">mapProjection'</span> <span class="o">::</span> <span class="p">(</span><span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Id</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">User'</span> <span class="o">-&gt;</span> <span class="kt">Id'</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Set</span> <span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">Set'</span> <span class="kt">User</span> <span class="kt">User'</span> <span class="o">-&gt;</span> <span class="kt">Set'</span> <span class="kt">Id</span> <span class="kt">Id'</span>
+
+<span class="n">userId</span>  <span class="o">::</span> <span class="kt">User</span> <span class="o">-&gt;</span>          <span class="kt">Id</span>
+<span class="n">userId'</span> <span class="o">::</span> <span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">User'</span> <span class="o">-&gt;</span> <span class="kt">Id'</span>
+
+<span class="n">dbTableToSet</span>  <span class="o">::</span> <span class="kt">DbTable</span> <span class="kt">User</span> <span class="o">-&gt;</span>                        <span class="kt">Set</span> <span class="kt">User</span>
+<span class="n">dbTableToSet'</span> <span class="o">::</span> <span class="kt">DbTable</span> <span class="kt">User</span> <span class="o">-&gt;</span> <span class="kt">DbTable'</span> <span class="kt">User</span> <span class="kt">User'</span> <span class="o">-&gt;</span> <span class="kt">Set'</span> <span class="kt">User</span> <span class="kt">User'</span>
+
+<span class="n">usersTable</span>  <span class="o">::</span> <span class="kt">DbTable</span> <span class="kt">User</span>
+<span class="n">usersTable'</span> <span class="o">::</span> <span class="kt">DbTable'</span> <span class="kt">User</span> <span class="kt">User'</span>
+
+<span class="kr">data</span> <span class="kt">RedisSet'</span> <span class="o">=</span> <span class="kt">SAdd</span> <span class="kt">String</span> <span class="o">|</span> <span class="o">...</span>
+<span class="kr">data</span> <span class="kt">DbTable'</span> <span class="n">a</span> <span class="n">a'</span> <span class="o">=</span> <span class="kt">Insert</span> <span class="n">a</span> <span class="o">|</span> <span class="o">...</span>
+</code></pre></div></div>
+
+<p>In the case of an insert, we have</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">usersTable'</span> <span class="o">=</span> <span class="kt">Insert</span> <span class="n">user</span>
+</code></pre></div></div>
+
+<p>which means that <code class="language-plaintext highlighter-rouge">userIds'</code> can be reduced to</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">userIds'</span> <span class="o">::</span> <span class="kt">RedisSet'</span>
+<span class="n">userIds'</span> <span class="o">=</span> <span class="kt">SAdd</span> <span class="p">(</span><span class="n">userId</span> <span class="n">user</span><span class="p">)</span>
+</code></pre></div></div>
+
+<hr />
+<p><sup><a href="#1" name="imprecise">1</a></sup>: I’m being a little imprecise when I define
+the derivative of a type as another type, since the type of the derivative can vary
+depending on the value. The derivative of 3 is all integers from -3 to positive infinity,
+not all integers.</p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2014/12/08/using-unsafeinterleaveio-to-lift-haskells-lazy-semantics-into-a-toy-interpreter/" data-toggle="tooltip"
+            data-placement="top" title="Using unsafeInterleaveIO to lift haskell's lazy semantics into a toy interpreter">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2017/03/05/the-history-of-the-frame-problem/" data-toggle="tooltip"
+            data-placement="top" title="The History of the Frame Problem">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

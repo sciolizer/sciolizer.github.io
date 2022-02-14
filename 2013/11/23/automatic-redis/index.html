@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Automatic redis, part one: inserts and cache key extraction</title>
+  <meta name="description" content="This post is part of a sequence I am calling automatic redis, which is my attempt to solve the cache invalidation problem.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2013/11/23/automatic-redis/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Automatic redis, part one: inserts and cache key extraction">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2013/11/23/automatic-redis/">
+  <meta property="og:description" content="This post is part of a sequence I am calling automatic redis, which is my attempt to solve the cache invalidation problem.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Automatic redis, part one: inserts and cache key extraction">
+  <meta name="twitter:description" content="This post is part of a sequence I am calling automatic redis, which is my attempt to solve the cache invalidation problem.">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Automatic redis, part one: inserts and cache key extraction</h1>
+    
+    <p class="post-meta"><time datetime="2013-11-23T21:04:08-08:00" itemprop="datePublished">Nov 23, 2013</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/artificial-intelligence/">artificial intelligence</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/automatic-redis/">automatic redis</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>This post is part of a sequence I am calling
+<a href="/blog/categories/automatic-redis">automatic redis</a>, which is my attempt to solve
+the cache invalidation problem.</p>
+
+<p>These are some initial thoughts on how to automate cache updates.
+The question I want to answer is this: given a mapping from redis
+keys to the queries that produce their values, how can I
+infer which redis commands should be run when I add, remove, and update items in the collections
+which are my source of truth?</p>
+
+<p>The code in this post is psuedo-haskell. What appears to the left of an <code class="language-plaintext highlighter-rouge">=</code> sign is not
+always a function, and the <code class="language-plaintext highlighter-rouge">.</code> is used for record field lookup as well as function
+composition.</p>
+
+<p>I’ll start with a simple example. Suppose I run a website which is a task manager, and
+I want to display on my website the number of users who
+have signed
+up for an account. i.e. I want to display <code class="language-plaintext highlighter-rouge">count users</code>. I don’t want to count the entire collection
+every time I add an item to it, so instead I keep the count in redis, and increment it whenever
+a new account is created. Proving that <a href="http://redis.io/commands/incr">INCR</a> is the right command
+to send to redis is straightforward:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">numUsers</span> <span class="o">=</span> <span class="n">count</span> <span class="n">users</span>
+<span class="n">numUsers_new</span> <span class="o">=</span> <span class="n">count</span> <span class="p">(</span><span class="n">users</span> <span class="o">++</span> <span class="p">[</span><span class="n">user</span><span class="p">])</span>
+<span class="n">numUsers_new</span> <span class="o">=</span> <span class="n">count</span> <span class="n">users</span> <span class="o">+</span> <span class="n">count</span> <span class="p">[</span><span class="n">user</span><span class="p">]</span>
+<span class="n">numUsers_new</span> <span class="o">=</span> <span class="n">numUsers</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="c1">-- INCR numUsers</span>
+</code></pre></div></div>
+
+<p>Notice that when <code class="language-plaintext highlighter-rouge">count</code> distributes, it changes the plus operation from union (<code class="language-plaintext highlighter-rouge">++</code>) to 
+addition (<code class="language-plaintext highlighter-rouge">+</code>).</p>
+
+<p>Here is a similar example, this time storing the ids instead of a count.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">userIds</span> <span class="o">=</span> <span class="n">map</span> <span class="n">userId</span> <span class="n">users</span>
+<span class="n">userIds_new</span> <span class="o">=</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span><span class="n">users</span> <span class="o">++</span> <span class="p">[</span><span class="n">user</span><span class="p">])</span>
+<span class="n">userIds_new</span> <span class="o">=</span> <span class="n">map</span> <span class="n">userId</span> <span class="n">users</span> <span class="o">++</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">[</span><span class="n">user</span><span class="p">]</span>
+<span class="n">userIds_new</span> <span class="o">=</span> <span class="n">userIds</span> <span class="o">++</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">[</span><span class="n">user</span><span class="p">]</span>
+<span class="n">userIds_new</span> <span class="o">=</span> <span class="n">userIds</span> <span class="o">++</span> <span class="p">[</span><span class="n">user</span><span class="o">.</span><span class="n">userId</span><span class="p">]</span>
+<span class="c1">-- SADD userIds 65495</span>
+</code></pre></div></div>
+
+<p>Obviously the appropriate redis command to use in this case is <a href="http://redis.io/commands/sadd">SADD</a>.</p>
+
+<p>Filtering is also straightforward.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">activeUserIds</span> <span class="o">=</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="n">users</span><span class="p">)</span>
+<span class="n">activeUserIds_new</span> <span class="o">=</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="o">$</span>
+  <span class="p">(</span><span class="n">users</span> <span class="o">++</span>
+  <span class="p">[</span><span class="n">user</span><span class="p">]))</span>
+<span class="n">activeUserIds_new</span> <span class="o">=</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span>
+  <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="n">users</span> <span class="o">++</span>
+  <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="p">[</span><span class="n">user</span><span class="p">])</span>
+<span class="n">activeUserIds_new</span> <span class="o">=</span>
+  <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="n">users</span><span class="p">)</span> <span class="o">++</span>
+  <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="p">[</span><span class="n">user</span><span class="p">])</span>
+<span class="n">activeUserIds_new</span> <span class="o">=</span> <span class="n">activeUserIds</span> <span class="o">++</span> <span class="n">map</span> <span class="n">userId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">)</span> <span class="p">[</span><span class="n">user</span><span class="p">])</span>
+<span class="c1">-- SADD activeUserIds 65495</span>
+</code></pre></div></div>
+
+<p>Obviously a pipeline of <code class="language-plaintext highlighter-rouge">SADD</code>s will be correct, and the expression to the right
+of the <code class="language-plaintext highlighter-rouge">++</code> gives my automatic cache system a procedure for determining which <code class="language-plaintext highlighter-rouge">SADD</code>
+operations to perform. When the cache system gets the user object to be added, it
+will learn that
+the number of <code class="language-plaintext highlighter-rouge">SADD</code> operations is either
+zero or one, but it doesn’t have to know that ahead of time.</p>
+
+<p>A computer can easily verify the above three proofs, as long as they are properly annotated.
+But can I get
+the computer to create the proof in the first place?</p>
+
+<p>Rewriting the activeUserIds example to use function composition suggests one approach.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">activeUserIds</span> <span class="o">=</span> <span class="p">(</span><span class="n">map</span> <span class="n">userId</span> <span class="o">.</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">))</span> <span class="n">users</span>
+<span class="n">activeUserIds_new</span> <span class="o">=</span> <span class="n">activeUserIds</span> <span class="o">++</span> <span class="p">(</span><span class="n">map</span> <span class="n">userId</span> <span class="o">.</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">x</span> <span class="o">-&gt;</span> <span class="n">x</span><span class="o">.</span><span class="n">status</span> <span class="o">==</span> <span class="kt">ACTIVE</span><span class="p">))</span> <span class="p">[</span><span class="n">user</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>In general, it seems that queries of the form</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">values</span> <span class="o">=</span> <span class="p">(</span><span class="n">f</span> <span class="o">.</span> <span class="n">g</span> <span class="o">.</span> <span class="n">h</span> <span class="cm">{- ... -}</span><span class="p">)</span> <span class="n">entities</span>
+</code></pre></div></div>
+
+<p>become</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">values_new</span> <span class="o">=</span> <span class="n">values</span> <span class="p">`</span><span class="n">mappend</span><span class="p">`</span> <span class="p">(</span><span class="n">f</span> <span class="o">.</span> <span class="n">g</span> <span class="o">.</span> <span class="n">h</span> <span class="cm">{- ... -}</span><span class="p">)</span> <span class="p">[</span><span class="n">entity</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>provided f, g, h, etc. all distribute over <code class="language-plaintext highlighter-rouge">mappend</code>. The actual value of <code class="language-plaintext highlighter-rouge">mappend</code> will determine
+which redis operation to perform. Integer addition becomes <code class="language-plaintext highlighter-rouge">INCR</code>, set union becomes <code class="language-plaintext highlighter-rouge">SADD</code>,
+sorted set union becomes <a href="http://redis.io/commands/zadd">ZADD</a>, list concatenation becomes
+<a href="http://redis.io/commands/lpush">LPUSH</a> or <a href="http://redis.io/commands/rpush">RPUSH</a>, etc. An
+important monoid which may not be obvious is the Last
+monoid (<code class="language-plaintext highlighter-rouge">mappend x y = y</code>), which becomes <a href="http://redis.io/commands/set">SET</a>.</p>
+
+<p>So much for updates on constant cache keys. Parameterized cache keys are much more
+interesting.</p>
+
+<p>On my task manager website, I want to have one cache entry per user. The user’s id
+will determine the cache key that I use.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds_'userId'</span> <span class="o">=</span> <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">.</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">))</span> <span class="n">tasks</span>
+</code></pre></div></div>
+
+<p>It’s tempting to think of this definition as a function:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds</span> <span class="o">::</span> <span class="kt">UserId</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="kt">TaskId</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>But an automatic caching system will not benefit from this perspective.
+From it’s perspective, the
+input is a task object, and the output is any number of redis commands. The system has to implicitly
+discover the <code class="language-plaintext highlighter-rouge">userId</code> from the task object it receives. The <code class="language-plaintext highlighter-rouge">userId</code> parameter of <code class="language-plaintext highlighter-rouge">taskIds.{userId}</code>
+is therefore more like a logic variable (e.g. from prolog) than a variable in imperative or functional
+languages.</p>
+
+<p>The monoidal shortcut rule is still valid for parameterized redis keys.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">.</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">))</span> <span class="p">[</span><span class="n">task</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>The caching system does not need to reduce this expression further, until it receives
+the task object. When it does, 
+it can evaluate the addend as an expression
+in a functional-logical language (similar to <a href="http://www-ps.informatik.uni-kiel.de/currywiki/">Curry</a>).</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">.</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">))</span> <span class="p">[</span><span class="n">task</span><span class="p">]</span>
+<span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="p">[</span><span class="n">task</span><span class="p">]))</span>
+<span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="p">(</span><span class="kr">if</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="n">task</span> <span class="kr">then</span>
+    <span class="n">task</span> <span class="o">:</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span> <span class="kr">else</span>
+           <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">))</span>
+<span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="p">(</span><span class="kr">if</span> <span class="n">task</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span> <span class="kr">then</span>
+    <span class="n">task</span> <span class="o">:</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span> <span class="kr">else</span>
+           <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>Unfortunately at this point the goal becomes suspended. The cache system
+can cheat a little by unifying
+<code class="language-plaintext highlighter-rouge">task.owner == userId</code> with <code class="language-plaintext highlighter-rouge">True</code> and <code class="language-plaintext highlighter-rouge">False</code>.</p>
+
+<p>In the true case, <code class="language-plaintext highlighter-rouge">userId</code> unifies with <code class="language-plaintext highlighter-rouge">task.owner</code>, which I’ll say is 65495:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds_65495_new</span> <span class="o">=</span> <span class="n">taskIds_65495</span> <span class="o">++</span> <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">$</span>
+  <span class="kr">if</span> <span class="mi">65495</span> <span class="o">==</span> <span class="mi">65495</span> <span class="kr">then</span>
+    <span class="n">task</span> <span class="o">:</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span> <span class="kr">else</span>
+           <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">)</span>
+<span class="n">taskIds_65495_new</span> <span class="o">=</span> <span class="n">taskIds_65495</span> <span class="o">++</span> <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">$</span>
+  <span class="kr">if</span> <span class="n">true</span> <span class="kr">then</span>
+    <span class="n">task</span> <span class="o">:</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span> <span class="kr">else</span>
+           <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">)</span>
+<span class="n">taskIds_65495_new</span> <span class="o">=</span> <span class="n">taskIds_65495</span> <span class="o">++</span> <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">$</span>
+  <span class="n">task</span> <span class="o">:</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">)</span>
+<span class="n">taskIds_65495_new</span> <span class="o">=</span> <span class="n">taskIds_65495</span> <span class="o">++</span> <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="p">[</span><span class="n">task</span><span class="p">])</span>
+<span class="n">taskIds_65495_new</span> <span class="o">=</span> <span class="n">taskIds_65495</span> <span class="o">++</span> <span class="n">task</span><span class="o">.</span><span class="n">id</span>
+<span class="c1">-- SADD taskIds_65495 ${task.id}</span>
+</code></pre></div></div>
+
+<p>In the false case, <code class="language-plaintext highlighter-rouge">userId</code> remains unbound, but that’s ok, because the expression reduces to a no-op:</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="p">(</span><span class="kr">if</span> <span class="n">false</span> <span class="kr">then</span>
+    <span class="n">task</span> <span class="o">:</span> <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span> <span class="kr">else</span>
+           <span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">))</span>
+<span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span> 
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">==</span> <span class="n">userId</span><span class="p">)</span> <span class="kt">[]</span><span class="p">))</span>
+<span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span>
+  <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="kt">[]</span><span class="p">)</span>
+<span class="n">taskIds_'userId'_new</span> <span class="o">=</span> <span class="n">taskIds_'userId'</span> <span class="o">++</span> <span class="kt">[]</span>
+<span class="c1">-- nothing to do</span>
+</code></pre></div></div>
+
+<p>In general, whenever the cache system’s
+goals become suspended, it can resume narrowing/residuation by picking a subexpression
+with low multiplicity (e.g. booleans, enums) and nondeterministically
+unifying it with all possible values.</p>
+
+<p>Most of the time, each unification will result in either a no-op, or a redis command with all
+parameters bound. An exception (are there others?)
+is queries which affect an inifinite number of redis keys,
+e.g. caching all tasks that do NOT belong to a user.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">taskIds_'userId'</span> <span class="o">=</span> <span class="p">(</span><span class="n">map</span> <span class="n">taskId</span> <span class="o">.</span> <span class="p">(</span><span class="n">filter</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">t</span><span class="o">.</span><span class="n">owner</span> <span class="o">!=</span> <span class="n">userId</span><span class="p">)))</span> <span class="n">tasks</span>
+</code></pre></div></div>
+
+<p>This is clearly a bug, so the caching system can just log an error and perform no
+cache updates.
+It may even be possible for the caching system
+to catch the bug at compile time by letting the inserted entity (e.g. a task)
+be an unbound variable, and seeing if a non-degenerate redis command
+with unbound redis key
+parameters can
+be produced.</p>
+
+<p>This post has focused mostly on inserts and queries that fit the monoidal pattern. In
+another post I’ll take a look at deletes and queries which are not so straightforward.</p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2013/10/04/rubber-duck-logging/" data-toggle="tooltip"
+            data-placement="top" title="Rubber-duck logging">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2014/01/25/automatic-redis/" data-toggle="tooltip"
+            data-placement="top" title="Automatic redis, part two: sorting and data structures">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

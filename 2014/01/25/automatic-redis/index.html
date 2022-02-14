@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Automatic redis, part two: sorting and data structures</title>
+  <meta name="description" content="This post is part of a sequence I am calling automatic redis, which is my attempt to solve the cache invalidation problem.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2014/01/25/automatic-redis/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Automatic redis, part two: sorting and data structures">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2014/01/25/automatic-redis/">
+  <meta property="og:description" content="This post is part of a sequence I am calling automatic redis, which is my attempt to solve the cache invalidation problem.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Automatic redis, part two: sorting and data structures">
+  <meta name="twitter:description" content="This post is part of a sequence I am calling automatic redis, which is my attempt to solve the cache invalidation problem.">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Automatic redis, part two: sorting and data structures</h1>
+    
+    <p class="post-meta"><time datetime="2014-01-25T12:40:47-08:00" itemprop="datePublished">Jan 25, 2014</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/artificial-intelligence/">artificial intelligence</a>,
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/automatic-redis/">automatic redis</a>
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>This post is part of a sequence I am calling
+<a href="/blog/categories/automatic-redis">automatic redis</a>, which is my attempt to solve
+the cache invalidation problem.</p>
+
+<p>In my <a href="/blog/2013/11/23/automatic-redis/">previous post</a>, I demonstrated that a
+library could infer cache update operations from database insert operations by performing
+algebraic manipulations on the queries that define the cache keys. The algebraic
+laws needed were the distribution laws between monoids. e.g. <code class="language-plaintext highlighter-rouge">count</code> distributes
+over the <code class="language-plaintext highlighter-rouge">Set</code> monoid to produce the <code class="language-plaintext highlighter-rouge">Sum</code> monoid. A library could also
+infer the arguments of the cache keys (e.g. <code class="language-plaintext highlighter-rouge">taskIds.{userId} -&gt; taskIds.65495</code>) by
+performing functional logical evaluation on the cache key’s query. If the library’s goal
+became suspended during evaluation, it could proceed by unifying expressions
+of low multiplicity with all possible values. For instance, if the goal for a filter
+query became suspended, the library could proceed by considering the <code class="language-plaintext highlighter-rouge">true</code> and
+<code class="language-plaintext highlighter-rouge">false</code> cases of the filter separately.</p>
+
+<p>In this post I would like to talk about sorting and limiting, as well as flesh out some of
+the data structures that might be used in an automatic redis library.</p>
+
+<h5 id="set">Set</h5>
+
+<p><code class="language-plaintext highlighter-rouge">Set</code> is the simplest data structure,
+and forms the foundation for two of our other collection types.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">type</span> <span class="kt">Set</span> <span class="n">a</span> <span class="o">=</span> <span class="kt">Data</span><span class="o">.</span><span class="kt">Set</span><span class="o">.</span><span class="kt">Set</span>
+</code></pre></div></div>
+
+<p>The monoidal operation for <code class="language-plaintext highlighter-rouge">Set</code> is simply set union.</p>
+
+<h5 id="list">List</h5>
+
+<p><code class="language-plaintext highlighter-rouge">List</code> is a <code class="language-plaintext highlighter-rouge">Set</code> with an embedded sorting function. Tracking the sorting function
+enables us to compute redis sorted set keys if necessary.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">List</span> <span class="n">a</span> <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="kt">Ord</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">List</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="p">(</span><span class="kt">Set</span> <span class="n">a</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>A commonly used sorting function would be <code class="language-plaintext highlighter-rouge">x =&gt; x.modifiedDate</code>.</p>
+
+<p>The monoidal operation for <code class="language-plaintext highlighter-rouge">List</code> is the merge operation from merge-sort, with
+one restriction: the sorting functions of both lists must be the same
+sorting function.</p>
+
+<h5 id="limitedlist">LimitedList</h5>
+
+<p><code class="language-plaintext highlighter-rouge">LimitedList</code> is a <code class="language-plaintext highlighter-rouge">List</code> with an upper bound on its size.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">LimitedList</span> <span class="n">a</span> <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="kt">Ord</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">LimitedList</span> <span class="kt">Integer</span> <span class="p">(</span><span class="kt">List</span> <span class="n">a</span> <span class="n">b</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The length of the contained <code class="language-plaintext highlighter-rouge">List</code> must be less than or equal to the upper bound.
+Tracking the length enables us to know how to trim cache entries, e.g.
+when using the <a href="http://redis.io/commands/zremrangebyrank">ZREMRANGEBYRANK</a> command.</p>
+
+<p>The monoidal operation for <code class="language-plaintext highlighter-rouge">LimitedList</code> is to merge-sort the two lists and truncate
+the result to the limit. Similarly to <code class="language-plaintext highlighter-rouge">List</code>, the library expects both lists to have
+the same
+upper limit.</p>
+
+<h5 id="first-and-last">First and Last</h5>
+
+<p><code class="language-plaintext highlighter-rouge">First</code> and <code class="language-plaintext highlighter-rouge">Last</code> are essentially <code class="language-plaintext highlighter-rouge">LimitedList</code>s whose upper bound is <code class="language-plaintext highlighter-rouge">1</code>. Making
+specialized types for singleton LimitedLists makes working with non-collection redis
+data structures easier.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">First</span> <span class="n">a</span> <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="kt">Ord</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">First</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="n">a</span><span class="p">)</span>
+<span class="kr">data</span> <span class="kt">Last</span>  <span class="n">a</span> <span class="n">b</span> <span class="o">=</span> <span class="p">(</span><span class="kt">Ord</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">Last</span>  <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="n">a</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Although <code class="language-plaintext highlighter-rouge">First</code> and <code class="language-plaintext highlighter-rouge">Last</code> have the same representation, they have different monoidal
+operations, namely <code class="language-plaintext highlighter-rouge">(x,y) =&gt; x</code> and <code class="language-plaintext highlighter-rouge">(x,y) =&gt; y</code>.</p>
+
+<h5 id="maybe">Maybe</h5>
+
+<p>The <code class="language-plaintext highlighter-rouge">Maybe</code> type is useful for queries that always generate a unique result (such
+as lookup by primary key), and as such the <code class="language-plaintext highlighter-rouge">Maybe</code> type
+does not need to contain a sorting function.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">Maybe</span> <span class="n">a</span> <span class="o">=</span> <span class="kt">Nothing</span> <span class="o">|</span> <span class="kt">Just</span> <span class="n">a</span>
+</code></pre></div></div>
+
+<p>The monoidal operation is to pick <code class="language-plaintext highlighter-rouge">Just</code> over <code class="language-plaintext highlighter-rouge">Nothing</code>, but with the restriction
+that both arguments cannot be <code class="language-plaintext highlighter-rouge">Just</code>s.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">instance</span> <span class="kt">Monoid</span> <span class="kt">Maybe</span> <span class="kr">where</span>
+  <span class="kt">Nothing</span>  <span class="p">`</span><span class="n">mappend</span><span class="p">`</span> <span class="kt">Nothing</span>  <span class="o">=</span> <span class="kt">Nothing</span>
+  <span class="kt">Nothing</span>  <span class="p">`</span><span class="n">mappend</span><span class="p">`</span> <span class="p">(</span><span class="kt">Just</span> <span class="n">x</span><span class="p">)</span> <span class="o">=</span> <span class="kt">Just</span> <span class="n">x</span>
+  <span class="p">(</span><span class="kt">Just</span> <span class="n">x</span><span class="p">)</span> <span class="p">`</span><span class="n">mappend</span><span class="p">`</span> <span class="kt">Nothing</span>  <span class="o">=</span> <span class="kt">Just</span> <span class="n">x</span>
+  <span class="p">(</span><span class="kt">Just</span> <span class="n">x</span><span class="p">)</span> <span class="p">`</span><span class="n">mappend</span><span class="p">`</span> <span class="p">(</span><span class="kt">Just</span> <span class="n">y</span><span class="p">)</span> <span class="o">=</span> <span class="n">error</span> <span class="s">"This should never happen."</span>
+</code></pre></div></div>
+
+<p>Collision of <code class="language-plaintext highlighter-rouge">Just</code>s can happen if the application developer misuses the <code class="language-plaintext highlighter-rouge">The</code> operation
+(defined below). Unfortunately this error cannot be caught by an automatic redis
+library, because
+the library never actually computes the value of <code class="language-plaintext highlighter-rouge">mappend</code>. The library only
+tracks monoidal types so that it can know what the final redis commands will
+be.</p>
+
+<p>Speaking of query operations, it’s about time I defined them. But first…
+one more monoid.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">Sum</span> <span class="o">=</span> <span class="kt">Sum</span> <span class="kt">Integer</span>
+
+<span class="kr">instance</span> <span class="kt">Monoid</span> <span class="kt">Sum</span> <span class="kr">where</span>
+  <span class="n">mappend</span> <span class="o">=</span> <span class="p">(</span><span class="o">+</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="query-operations">Query operations</h2>
+
+<p>Query operations are parameterized over an input type and an output type.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">-- QO = Query Operation</span>
+<span class="kr">data</span> <span class="kt">QO</span> <span class="n">input</span> <span class="n">output</span> <span class="kr">where</span>
+  <span class="c1">-- The operations Where, Count, Sum, The, and SortBy are not concerned with the ordering</span>
+  <span class="c1">-- of their input, so they can work on Sets, Lists, LimitedLists, Firsts, Lasts,</span>
+  <span class="c1">-- and Maybes. In these constructor definitions, 'coll' can mean any of those types.</span>
+  <span class="c1">-- A real implementation might have multiples versions of these query operations,</span>
+  <span class="c1">--   e.g. WhereSet, WhereList, WhereLimitedList, ..., CountSet, CountList, etc.</span>
+  <span class="kt">Where</span> <span class="o">::</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="kt">Boolean</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="n">coll</span> <span class="n">a</span><span class="p">)</span>       <span class="p">(</span><span class="n">coll</span> <span class="n">a</span><span class="p">)</span>
+  <span class="kt">Count</span> <span class="o">::</span>                        <span class="kt">QO</span> <span class="p">(</span><span class="n">coll</span> <span class="n">a</span><span class="p">)</span>       <span class="kt">Sum</span>
+  <span class="kt">Sum</span>   <span class="o">::</span>                        <span class="kt">QO</span> <span class="p">(</span><span class="n">coll</span> <span class="kt">Integer</span><span class="p">)</span> <span class="kt">Sum</span>
+
+  <span class="c1">-- 'The' takes a collection which is expected to have no more than one element</span>
+  <span class="c1">-- and extracts the element.</span>
+  <span class="kt">The</span>   <span class="o">::</span> <span class="kt">QO</span> <span class="p">(</span><span class="n">coll</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="n">a</span><span class="p">)</span>
+
+  <span class="c1">-- SortBy converts any kind of collection into a List.</span>
+  <span class="kt">SortBy</span> <span class="o">::</span> <span class="p">(</span><span class="kt">Ord</span> <span class="n">b</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="n">coll</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">List</span> <span class="n">a</span><span class="p">)</span>
+
+  <span class="c1">-- Limit, First, and Last, are defined for any (seq)uence:</span>
+  <span class="c1">--   Lists, LimitedLists, Firsts, and Lasts.</span>
+  <span class="kt">Limit</span> <span class="o">::</span> <span class="kt">Integer</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="n">seq</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">LimitedList</span> <span class="n">a</span><span class="p">)</span>
+  <span class="kt">First</span> <span class="o">::</span>            <span class="kt">QO</span> <span class="p">(</span><span class="n">seq</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">First</span> <span class="n">a</span><span class="p">)</span>
+  <span class="kt">Last</span>  <span class="o">::</span>            <span class="kt">QO</span> <span class="p">(</span><span class="n">seq</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">Last</span> <span class="n">a</span><span class="p">)</span>
+
+  <span class="c1">-- Mapping only works on Set!</span>
+  <span class="kt">Select</span> <span class="o">::</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="kt">Set</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">Set</span> <span class="n">b</span><span class="p">)</span>
+
+  <span class="c1">-- Well technically Select also works on Maybe, but we'll make a separate</span>
+  <span class="c1">-- query operation for Maybes.</span>
+  <span class="kt">Apply</span> <span class="o">::</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="kt">Maybe</span> <span class="n">b</span><span class="p">)</span>
+
+  <span class="c1">-- Lists contain their sorting function, so we cannot allow arbitrary</span>
+  <span class="c1">-- mapping on lists. We can, however, support monotonic mappings.</span>
+  <span class="kt">SelectMonotonic</span>        <span class="o">::</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span>          <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="n">seq</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="n">seq</span> <span class="n">b</span><span class="p">)</span>
+
+  <span class="c1">-- Mappings which scramble the order are also allowed, as long as we</span>
+  <span class="c1">-- have a way to recover the order. i.e. 'a -&gt; c' has to be monotonic,</span>
+  <span class="c1">-- even though 'a -&gt; b' and 'b -&gt; c' do not.</span>
+  <span class="kt">SelectReversible</span>       <span class="o">::</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">a</span> <span class="o">-&gt;</span> <span class="n">b</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">Expr</span> <span class="p">(</span><span class="n">b</span> <span class="o">-&gt;</span> <span class="n">c</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="p">(</span><span class="n">seq</span> <span class="n">a</span><span class="p">)</span> <span class="p">(</span><span class="n">seq</span> <span class="n">b</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>A few more data structures and we will have all the pieces necessary for
+an application developer to define a cache schema.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kr">data</span> <span class="kt">Table</span> <span class="n">t</span> <span class="o">=</span> <span class="kt">Table</span> <span class="kt">String</span>
+
+<span class="c1">-- A Query is a sequence of query operations that begins with a table</span>
+<span class="kr">data</span> <span class="kt">Query</span> <span class="n">output</span> <span class="kr">where</span>
+  <span class="kt">From</span> <span class="o">::</span> <span class="kt">Table</span> <span class="n">t</span> <span class="o">-&gt;</span> <span class="kt">Query</span> <span class="p">(</span><span class="kt">Set</span> <span class="n">t</span><span class="p">)</span>
+  <span class="kt">Compose</span> <span class="o">::</span> <span class="kt">Query</span> <span class="n">input</span> <span class="o">-&gt;</span> <span class="kt">QO</span> <span class="n">input</span> <span class="n">output</span> <span class="o">-&gt;</span> <span class="kt">Query</span> <span class="n">output</span>
+
+<span class="c1">-- convenience constructor</span>
+<span class="p">(</span><span class="o">+&gt;</span><span class="p">)</span> <span class="o">=</span> <span class="kt">Compose</span>
+
+<span class="kr">data</span> <span class="kt">CacheKeyDefinition</span> <span class="o">=</span> <span class="kt">CacheKeyDefinition</span> <span class="p">{</span>
+  <span class="n">keyTemplate</span> <span class="o">::</span> <span class="kt">String</span><span class="p">,</span> <span class="c1">-- e.g. "taskIds.{userId}"</span>
+  <span class="n">query</span> <span class="o">::</span> <span class="kt">Query</span> <span class="c1">-- e.g. from tasks where task.userId = userId select task.id</span>
+<span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>Putting it all together, we can showcase the cache schema for a simple task management
+website.</p>
+
+<div class="language-haskell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kr">type</span> <span class="kt">TaskId</span> <span class="o">=</span> <span class="kt">String</span>
+<span class="kr">type</span> <span class="kt">UserId</span> <span class="o">=</span> <span class="kt">String</span>
+
+<span class="kr">data</span> <span class="kt">Task</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">taskId</span> <span class="o">::</span> <span class="kt">TaskId</span><span class="p">,</span>
+    <span class="n">ownerId</span> <span class="o">::</span> <span class="kt">UserId</span><span class="p">,</span>
+    <span class="n">title</span> <span class="o">::</span> <span class="kt">String</span><span class="p">,</span>
+    <span class="n">completed</span> <span class="o">::</span> <span class="kt">Boolean</span><span class="p">,</span>
+    <span class="n">dueDate</span> <span class="o">::</span> <span class="kt">Integer</span> <span class="p">}</span>
+ <span class="kr">deriving</span> <span class="p">(</span><span class="kt">Eq</span><span class="p">,</span> <span class="kt">Ord</span><span class="p">,</span> <span class="kt">Read</span><span class="p">,</span> <span class="kt">Show</span><span class="p">)</span>
+
+<span class="n">taskTable</span> <span class="o">=</span> <span class="kt">Table</span> <span class="s">"tasks"</span> <span class="o">::</span> <span class="kt">Table</span> <span class="kt">Task</span>
+
+<span class="n">schema</span> <span class="o">=</span> <span class="kr">do</span>
+  <span class="c1">-- The task objects.</span>
+  <span class="c1">-- type: String</span>
+  <span class="c1">-- expected redis commands on insert:</span>
+  <span class="c1">--   SET</span>
+  <span class="s">"task.{taskId}"</span> <span class="o">$=</span> <span class="nf">\</span><span class="n">tid</span> <span class="o">-&gt;</span>
+    <span class="kt">From</span> <span class="n">taskTable</span> <span class="o">+&gt;</span>
+    <span class="kt">Where</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">taskId</span> <span class="n">t</span> <span class="o">==</span> <span class="n">tid</span><span class="p">)</span> <span class="o">+&gt;</span>
+    <span class="kt">The</span> <span class="o">+&gt;</span>
+    <span class="kt">Apply</span> <span class="n">show</span>
+
+  <span class="c1">-- For each user, the ids of her most urgent tasks.</span>
+  <span class="c1">-- type: Sorted Set, where the keys are the dueDate and the values are the taskIds.</span>
+  <span class="c1">-- expected redis commands on insert:</span>
+  <span class="c1">--   ZADD</span>
+  <span class="c1">--   ZREMRANGEBYRANK</span>
+  <span class="s">"activeTaskIds.{userId}"</span> <span class="o">$=</span> <span class="nf">\</span><span class="n">uid</span> <span class="o">-&gt;</span>
+    <span class="kt">From</span> <span class="n">taskTable</span> <span class="o">+&gt;</span>
+    <span class="kt">Where</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">ownerId</span> <span class="n">t</span> <span class="o">==</span> <span class="n">uid</span> <span class="o">&amp;&amp;</span> <span class="n">not</span> <span class="p">(</span><span class="n">completed</span> <span class="n">t</span><span class="p">))</span> <span class="o">+&gt;</span>
+    <span class="kt">SortBy</span> <span class="n">dueDate</span> <span class="o">+&gt;</span>
+    <span class="kt">Limit</span> <span class="mi">100</span> <span class="o">+&gt;</span>
+    <span class="kt">SelectReversible</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="p">(</span><span class="n">dueDate</span> <span class="n">t</span><span class="p">,</span> <span class="n">taskId</span> <span class="n">t</span><span class="p">))</span> <span class="n">fst</span>
+
+  <span class="c1">-- The number of tasks a user has successfully completed.</span>
+  <span class="c1">-- type: integer</span>
+  <span class="c1">-- expected redis commands on insert:</span>
+  <span class="c1">--   INCR</span>
+  <span class="s">"numCompleted.{userId}"</span> <span class="o">$=</span> <span class="nf">\</span><span class="n">uid</span> <span class="o">-&gt;</span>
+    <span class="kt">From</span> <span class="n">taskTable</span> <span class="o">+&gt;</span>
+    <span class="kt">Where</span> <span class="p">(</span><span class="nf">\</span><span class="n">t</span> <span class="o">-&gt;</span> <span class="n">ownerId</span> <span class="n">t</span> <span class="o">==</span> <span class="n">uid</span> <span class="o">&amp;&amp;</span> <span class="n">completed</span> <span class="n">t</span><span class="p">)</span> <span class="o">+&gt;</span>
+    <span class="kt">Count</span>
+</code></pre></div></div>
+
+<p>It’s important to keep in mind that although I have made the above code look
+like haskell, no library in haskell could actually use the above code. The variables
+occuring after the <code class="language-plaintext highlighter-rouge">$=</code> sign are logic variables, not function parameters. An
+EDSL could get close to something like the above, but the normal types for
+<code class="language-plaintext highlighter-rouge">==</code> and <code class="language-plaintext highlighter-rouge">&amp;&amp;</code> are unusable, and the lambdas inside the <code class="language-plaintext highlighter-rouge">Where</code> clauses
+would need to be reified anyway.</p>
+
+<p>Still to come: deletes, updates, uniqueness constraints (maybe?), and psuedo-code
+for the generation of redis commands.</p>
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2013/11/23/automatic-redis/" data-toggle="tooltip"
+            data-placement="top" title="Automatic redis, part one: inserts and cache key extraction">&larr; Previous Post</a>
+    </li>
+    
+    
+    <li class="next">
+        <a href="/2014/04/28/partial-evaluation-of-fat-languages/" data-toggle="tooltip"
+            data-placement="top" title="Partial evaluation of fat languages">Next Post &rarr;</a>
+    </li>
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

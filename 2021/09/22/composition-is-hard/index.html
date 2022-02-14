@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>An example of why software composition is hard</title>
+  <meta name="description" content="Combining two concepts into a program is rarely as simple as import A; import B;. Almost always, when you combine two libraries, additional code must be written to handle their interaction. The following example comes from Wolfgang Scholz. I learned about it from the paper An Overview of Feature-Oriented Software Development, by Apel and Kästner.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2021/09/22/composition-is-hard/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="An example of why software composition is hard">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2021/09/22/composition-is-hard/">
+  <meta property="og:description" content="Combining two concepts into a program is rarely as simple as import A; import B;. Almost always, when you combine two libraries, additional code must be written to handle their interaction. The following example comes from Wolfgang Scholz. I learned about it from the paper An Overview of Feature-Oriented Software Development, by Apel and Kästner.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="An example of why software composition is hard">
+  <meta name="twitter:description" content="Combining two concepts into a program is rarely as simple as import A; import B;. Almost always, when you combine two libraries, additional code must be written to handle their interaction. The fol...">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">An example of why software composition is hard</h1>
+    
+    <p class="post-meta"><time datetime="2021-09-22T11:00:00-07:00" itemprop="datePublished">Sep 22, 2021</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/composition/">composition</a>
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>Combining two concepts into a program is rarely as simple as 
+<code class="language-plaintext highlighter-rouge">import A; import B;</code>. Almost always, when you combine two libraries, additional
+code must be written to handle their interaction. The following example comes
+from Wolfgang Scholz. I learned about it from the paper <a href="https://www.cs.cmu.edu/~ckaestne/pdf/JOT09_OverviewFOSD.pdf">An Overview of
+Feature-Oriented Software Development</a>, by Apel and Kästner.</p>
+
+<p>Suppose one library provides us with the implementation of a singly linked list:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">ForwardList</span> <span class="p">{</span>
+    <span class="n">ForwardNode</span> <span class="n">first</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+    <span class="k">public</span> <span class="k">virtual</span> <span class="k">void</span> <span class="nf">push</span><span class="p">(</span><span class="n">ForwardNode</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">n</span><span class="p">.</span><span class="n">next</span> <span class="p">=</span> <span class="n">first</span><span class="p">;</span> <span class="n">first</span> <span class="p">=</span> <span class="n">n</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">class</span> <span class="nc">ForwardNode</span> <span class="p">{</span>
+    <span class="n">ForwardNode</span> <span class="n">next</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>and another library provides us with the implementation of a reversely linked
+list:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">ReverseList</span> <span class="p">{</span>
+    <span class="n">ReverseNode</span> <span class="n">last</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+    <span class="k">public</span> <span class="k">virtual</span> <span class="k">void</span> <span class="nf">shup</span><span class="p">(</span><span class="n">ReverseNode</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">n</span><span class="p">.</span><span class="n">prev</span> <span class="p">=</span> <span class="n">last</span><span class="p">;</span> <span class="n">last</span> <span class="p">=</span> <span class="n">n</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">class</span> <span class="nc">ReverseNode</span> <span class="p">{</span>
+    <span class="n">ReverseNode</span> <span class="n">prev</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We’d like to combine them to make a doubly-linked list. If our language had
+multiple inheritance, a naive combination would look like this:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">List</span> <span class="p">:</span> <span class="n">ForwardList</span><span class="p">,</span> <span class="n">ReverseList</span> <span class="p">{}</span>
+</code></pre></div></div>
+
+<p>This is problematic in at least three ways.</p>
+
+<h3 id="problem-1-ambiguity-around-how-to-share-state">Problem 1: Ambiguity around how to share state</h3>
+
+<p>Our merged <code class="language-plaintext highlighter-rouge">List</code> class does not contain a single list with two directions of
+traversal.
+It contains two lists:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">List</span> <span class="p">:</span> <span class="n">ForwardList</span><span class="p">,</span> <span class="n">ReverseList</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="n">ForwardNode</span> <span class="n">first</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+    <span class="k">override</span> <span class="n">ReverseNode</span> <span class="n">last</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Obviously we want to combine <code class="language-plaintext highlighter-rouge">ForwardNode</code> and <code class="language-plaintext highlighter-rouge">ReverseNode</code> into a single
+class <code class="language-plaintext highlighter-rouge">Node</code>.</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">Node</span> <span class="p">:</span> <span class="n">ForwardNode</span><span class="p">,</span> <span class="n">ReverseNode</span> <span class="p">{}</span>
+</code></pre></div></div>
+
+<p>Ambiguity remains over when and how occurences of <code class="language-plaintext highlighter-rouge">ForwardNode</code> and
+<code class="language-plaintext highlighter-rouge">ReverseNode</code> should be replaced. In the case of a doubly-linked list, replacing
+all occurences gives us the state we want:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">List</span> <span class="p">:</span> <span class="n">ForwardList</span><span class="p">,</span> <span class="n">ReverseList</span> <span class="p">{</span>
+    <span class="n">Node</span> <span class="n">first</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">Node</span> <span class="n">last</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>But, had we been combining circular lists, this would not have been enough.</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">CircularList</span> <span class="p">:</span> <span class="n">ForwardCircularList</span><span class="p">,</span> <span class="n">ReverseCircularList</span> <span class="p">{</span>
+    <span class="n">Node</span> <span class="n">first</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span>
+    <span class="n">Node</span> <span class="n">last</span> <span class="p">{</span> <span class="k">get</span><span class="p">;</span> <span class="k">set</span><span class="p">;</span> <span class="p">}</span> <span class="c1">// wrong!</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We would have wanted the fields <code class="language-plaintext highlighter-rouge">first</code> and <code class="language-plaintext highlighter-rouge">last</code> to be combined into a single
+field.</p>
+
+<p>Conceivably, all of this ambiguity might be resolvable with a set of annotations
+or language keywords that the programmer provides to specify exactly the
+combination for which she is looking. But state is only one part of the
+problem…</p>
+
+<h3 id="problem-2-type-incompatibility">Problem 2: Type incompatibility</h3>
+
+<p>Replacing all occurences of <code class="language-plaintext highlighter-rouge">ForwardNode</code> and <code class="language-plaintext highlighter-rouge">ReverseNode</code> with <code class="language-plaintext highlighter-rouge">Node</code>
+violates the typing rules around inheritance. Our method signatures have become:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">List</span> <span class="p">:</span> <span class="n">ForwardList</span><span class="p">,</span> <span class="n">ReverseList</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">virtual</span> <span class="k">void</span> <span class="nf">push</span><span class="p">(</span><span class="n">Node</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span> <span class="cm">/* ... */</span> <span class="p">}</span>
+    <span class="k">override</span> <span class="k">virtual</span> <span class="k">void</span> <span class="nf">shup</span><span class="p">(</span><span class="n">Node</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span> <span class="cm">/* ... */</span> <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">Node</code>s in these signatures are in contravariant position, and so these
+signatures are valid only when <code class="language-plaintext highlighter-rouge">Node</code> is a superclass of <code class="language-plaintext highlighter-rouge">ForwardNode</code> and
+<code class="language-plaintext highlighter-rouge">ReverseNode</code>, not when it is a subclass! That is, any class that previously
+operated on a <code class="language-plaintext highlighter-rouge">ForwardList</code> would make calls to
+<code class="language-plaintext highlighter-rouge">push(ForwardNode node)</code>, and these calls would become invalid in cases where
+the receiver is a <code class="language-plaintext highlighter-rouge">List</code>, because <code class="language-plaintext highlighter-rouge">List</code> does not accept <code class="language-plaintext highlighter-rouge">ForwardNode</code>s in its
+<code class="language-plaintext highlighter-rouge">push(...)</code> method, unless that <code class="language-plaintext highlighter-rouge">ForwardNode</code> is actually a <code class="language-plaintext highlighter-rouge">Node</code>!</p>
+
+<p>How might we resolve this problem? Just as in the previous problem, we could
+attempt replacing all occurences of <code class="language-plaintext highlighter-rouge">ForwardList</code> with <code class="language-plaintext highlighter-rouge">List</code>. That is,
+for every class <code class="language-plaintext highlighter-rouge">X</code> that uses a <code class="language-plaintext highlighter-rouge">ForwardList</code>, the language could generate
+a class <code class="language-plaintext highlighter-rouge">XPrime</code> that uses <code class="language-plaintext highlighter-rouge">List</code>s and <code class="language-plaintext highlighter-rouge">Node</code>s instead of <code class="language-plaintext highlighter-rouge">ForwardList</code>s and
+<code class="language-plaintext highlighter-rouge">ForwardNode</code>s. This would work in some, but not all cases. If
+class <code class="language-plaintext highlighter-rouge">X</code> constructed instances of <code class="language-plaintext highlighter-rouge">ForwardNode</code> directly, for instance, how
+should it
+construct a <code class="language-plaintext highlighter-rouge">Node</code> directly? Where would we get a value <code class="language-plaintext highlighter-rouge">prev</code> to pass into
+the constructor of <code class="language-plaintext highlighter-rouge">Node</code>?</p>
+
+<h3 id="problem-3-emergent-logic">Problem 3: Emergent logic</h3>
+
+<p>Correct implementations of <code class="language-plaintext highlighter-rouge">push</code> and <code class="language-plaintext highlighter-rouge">shup</code> require additional logic that
+did not occur in either <code class="language-plaintext highlighter-rouge">ForwardList</code> or <code class="language-plaintext highlighter-rouge">ReverseList</code>:</p>
+
+<div class="language-csharp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">List</span> <span class="p">:</span> <span class="n">ForwardList</span><span class="p">,</span> <span class="n">ReverseList</span> <span class="p">{</span>
+    <span class="k">override</span> <span class="k">virtual</span> <span class="k">void</span> <span class="nf">push</span><span class="p">(</span><span class="n">Node</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">first</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">last</span> <span class="p">=</span> <span class="n">n</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">first</span><span class="p">.</span><span class="n">prev</span> <span class="p">=</span> <span class="n">n</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">super</span><span class="p">.</span><span class="nf">push</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">override</span> <span class="k">virtual</span> <span class="k">void</span> <span class="nf">shup</span><span class="p">(</span><span class="n">Node</span> <span class="n">n</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">last</span> <span class="p">==</span> <span class="k">null</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">first</span> <span class="p">=</span> <span class="n">n</span><span class="p">;</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">last</span><span class="p">.</span><span class="n">next</span> <span class="p">=</span> <span class="n">n</span><span class="p">;</span>
+        <span class="p">}</span>
+        <span class="n">super</span><span class="p">.</span><span class="nf">shup</span><span class="p">(</span><span class="n">n</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">push(...)</code> now incorporates some of the logic from <code class="language-plaintext highlighter-rouge">super.shup(...)</code>, namely
+the assignment <code class="language-plaintext highlighter-rouge">last = n</code>. Simiarly, <code class="language-plaintext highlighter-rouge">shup(...)</code> incorporates some of the
+logic from <code class="language-plaintext highlighter-rouge">super.push(...)</code>. How would a programming language know that such
+mixing needed to occur? Moreover, this borrowed code is conditioned on a null
+check. Neither the null check, nor the code in the other path of the null check
+existed in the implementations of
+<code class="language-plaintext highlighter-rouge">ForwardList</code> and <code class="language-plaintext highlighter-rouge">ReverseList</code>!</p>
+
+<p>Of our three problems, this one is the most vexing. Programming languages today
+have a multitude of ways to compose code. We have gone well beyond function
+application
+and created inheritance, multiple inheritance, generic functions, mixins,
+traits, classical
+prototypes, lieberman-style prototypes, aspects, type
+classes, <a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.121.6603&amp;rep=rep1&amp;type=pdf">open extensible object models</a>, <a href="https://en.wikipedia.org/wiki/OBJ_(programming_language)">module expressions</a>,
+and the list goes on and on.
+Yet none of these composition models avoid the need to write additional logic
+when you combine a <code class="language-plaintext highlighter-rouge">ForwardList</code> and a <code class="language-plaintext highlighter-rouge">ReverseList</code>.</p>
+
+<p>Still, it must be possible, because humans do it all the time. A promising
+approach is to add constraints to our language, a la
+<a href="https://en.wikipedia.org/wiki/Abstract_data_type">abstract data types</a>. In such a paradigm, we could omit the implementation
+code, and instead provide constraints on our methods’ behaviors:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class ForwardList {
+    inferred void push(ForwardNode node);
+    inferred ForwardNode get(int index);
+    // ... extra methods ...
+    constraint {
+        free vars len : int, list : ForwardList;
+        for (i : 0..len) {
+            list.push(new ForwardNode());
+        }
+        for (i : 0..(len - 1)) {
+            assert list.get(i).next == list.get(i + 1);
+        }
+    }
+    // ... extra constraints ...
+}
+
+class ReverseList {
+    inferred void shup(ReverseNode node);
+    inferred ReverseNode get(int index);
+    // ... extra methods ...
+    constraint {
+        free vars len : int, list : ForwardList;
+        assume list.get(0) == null; // so that we start with an empty list
+        for (i : 0..len) {
+            list.push(new ReverseNode());
+        }
+        for (i : len..1) {
+            assert list.get(i).prev == list.get(i - 1);
+        }
+    }
+    // ... extra constraints ...
+}
+</code></pre></div></div>
+
+<p>The beauty of constraints is that they compose perfectly. The composition of two
+constraints is simply their conjunction! Combining the two types of list is now
+straightforward:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>class Node combines ForwardNode, ReverseNode {}
+class List combines
+        ForwardList[ForwardNode =&gt; Node],
+        ReverseList[ReverseNode =&gt; Node] {
+    // we receive push() from ForwardList
+    // we receive shup() from ReverseList
+    
+    // we receive get() from both, and they become the same method because
+    // their types have been coerced to Node.
+
+    // we receive all of the constraints from ForwardList
+    
+    // and we receive all of the constraints from ReverseList
+}
+</code></pre></div></div>
+
+<p>The constraints from <code class="language-plaintext highlighter-rouge">ForwardList</code> and <code class="language-plaintext highlighter-rouge">ReverseList</code> both call <code class="language-plaintext highlighter-rouge">get()</code>, and so
+we
+force our
+sufficiently-smart compiler to derive new implementations of <code class="language-plaintext highlighter-rouge">push()</code> and
+<code class="language-plaintext highlighter-rouge">shup()</code>.
+The constraints ensure that it will be the implementation we desire.</p>
+
+<p>Such a compiler might seem like magic now, but research is progressing toward
+it. Current endeavors include <a href="https://excape.cis.upenn.edu/documents/rosette_Emina.pdf">Rosette</a>, <a href="https://www.youtube.com/watch?v=HnOix9TFy1A">SynQuid</a>, and the
+<a href="https://excape.cis.upenn.edu/">ExCAPE project</a>. And you can get a <a href="https://www.youtube.com/watch?v=fHK-uS-Iedc">surprising amount of mileage</a> out of
+the
+logic program <code class="language-plaintext highlighter-rouge">eval(Program, ...) := ...</code>.</p>
+
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2017/03/05/the-history-of-the-frame-problem/" data-toggle="tooltip"
+            data-placement="top" title="The History of the Frame Problem">&larr; Previous Post</a>
+    </li>
+    
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>
