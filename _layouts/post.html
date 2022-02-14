@@ -1,0 +1,92 @@
+---
+layout: default
+---
+<article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    {% if page.external-url %}
+      <h1 class="post-title" itemprop="name headline"><a href="{{ page.external-url }}">{{ page.title | escape }} &rarr;</a></h1>
+    {% else %}
+      <h1 class="post-title" itemprop="name headline">{{ page.title | escape }}</h1>
+    {% endif %}
+    <p class="post-meta"><time datetime="{{ page.date | date_to_xmlschema }}" itemprop="datePublished">{% include date.html date=page.date %}</time>{% if page.author %} • <span itemprop="author" itemscope itemtype="http://schema.org/Person"><span itemprop="name">{{ page.author }}</span></span>{% endif %}{% if page.categories != empty or page.tags != empty %}{% include category_links.html categories=page.categories tags=page.tags %}{% endif %}</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    {{ content }}
+  </div>
+
+  {% if site.comments == true and page.comments != false %}
+    <div class="post-comments" itemprop="comment">
+      {% include custom_comments_provider.html %}
+    </div>
+  {% endif %}
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    {% if page.previous.url %}
+    <li class="previous">
+        <a href="{{ page.previous.url | prepend: site.baseurl | replace: '//', '/' }}" data-toggle="tooltip"
+            data-placement="top" title="{{page.previous.title}}">&larr; Previous Post</a>
+    </li>
+    {% endif %}
+    {% if page.next.url %}
+    <li class="next">
+        <a href="{{ page.next.url | prepend: site.baseurl | replace: '//', '/' }}" data-toggle="tooltip"
+            data-placement="top" title="{{page.next.title}}">Next Post &rarr;</a>
+    </li>
+    {% endif %}
+</ul>
