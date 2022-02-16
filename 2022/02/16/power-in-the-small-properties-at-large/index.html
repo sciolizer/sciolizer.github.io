@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  
+  
+  <title>Power in the small, properties at large</title>
+  <meta name="description" content="The fight between imperative and functional programming is a special case of a larger tradeoff, which Ted Kaminski describes as power vs properties.">
+  
+
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="canonical" href="http://sciolizer.com/2022/02/16/power-in-the-small-properties-at-large/">
+  
+  
+  <link rel="alternate" type="application/rss+xml" title="They might be programs" href="http://sciolizer.com/feed.xml">
+
+  
+
+  
+  <meta property="og:title" content="Power in the small, properties at large">
+  <meta property="og:site_name" content="They might be programs">
+  <meta property="og:url" content="http://sciolizer.com/2022/02/16/power-in-the-small-properties-at-large/">
+  <meta property="og:description" content="The fight between imperative and functional programming is a special case of a larger tradeoff, which Ted Kaminski describes as power vs properties.">
+  
+  
+  <meta name="twitter:card" content="summary">
+  
+  <meta name="twitter:title" content="Power in the small, properties at large">
+  <meta name="twitter:description" content="The fight between imperative and functional programming is a special case of a larger tradeoff, which Ted Kaminski describes as power vs properties.">
+  
+  
+
+  <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bitter:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+
+  
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+  <div class="wrapper">
+
+    <a class="site-title" href="/">They might be programs</a>
+
+    <nav class="site-nav">
+      
+        
+        <a class="page-link" href="/archives/">Archives</a>
+      
+    </nav>
+
+  </div>
+
+</header>
+
+
+    <main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    
+      <h1 class="post-title" itemprop="name headline">Power in the small, properties at large</h1>
+    
+    <p class="post-meta"><time datetime="2022-02-16T10:00:00-08:00" itemprop="datePublished">Feb 16, 2022</time> •
+  
+    
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+    
+      
+        <a href="/categories/composition/">composition</a>
+      
+    
+  
+
+
+
+</p>
+  </header>
+
+  <div class="post-content" itemprop="articleBody">
+    <p>The fight between imperative and functional programming is a special case of a
+larger tradeoff, which Ted Kaminski describes as <a href="https://www.tedinski.com/2018/01/30/the-one-ring-problem-abstraction-and-power.html">power vs properties</a>.</p>
+
+<blockquote>
+  <p>You cannot create an abstraction without saying two things: what it is, and
+what it is not… You cannot make an abstraction more <strong>powerful</strong> without
+sacrificing some <strong>properties</strong> that you used to know about it. Necessarily.
+You
+cannot require a new <strong>property</strong> be true about an abstraction without
+sacrificing
+some of its <strong>power</strong> and flexibility. Always.</p>
+</blockquote>
+
+<p>Mutable data structures are strictly more <strong>powerful</strong> than immutable data
+structures (code that works on immutable data structures will also work on
+mutable data structures), and mutability often offers a way to make an algorithm
+more efficient. But of course, they have lost the valuable <strong>property</strong> of
+immutability: you have to be careful which functions you let touch your mutable
+data structure, lest your program become incorrect because of an unexpected
+mutation.</p>
+
+<p>The algorithm for determining whether a program is correct is
+divide-and-conquer: a program is correct if its pieces are correct and its
+pieces are glued together correctly. A piece is correct if its post-conditions
+are true when its pre-conditions are true. The glue is correct if all
+pre-conditions are true. Pre-conditions and post-conditions are of course
+properties, and so properties are the means by which we determine, <em>at large</em>,
+whether our programs are correct.</p>
+
+<p>But properties get in our way <em>in the small</em>. The for-loop is more powerful than
+left-fold. Any left-fold can easily be turned into a for-loop, but the converse
+is not true. The left-fold has some nice properties: the number of iterations is
+always the size of the traversed data structure, for example. But if, upon
+revisiting a left-fold, I realize I need early termination in some cases, then
+I will wish I had written the left-fold as a for-loop. The properties of a
+left-fold were never that valuable to me in the first place: if the whole
+for-loop
+is just a few lines long, then I can <strong>see</strong> that it is correct.</p>
+
+<p>This suggests a guideline to follow in choosing between power and properties.
+When my code is small, I want powerful abstractions (e.g. mutable data
+structures) and powerful compositions (e.g. for-loops). When my code is large,
+and especially when it spans multiple files, I want abstractions with clear
+properties (e.g. immutable data structures) and compositions with clear
+properties (e.g. left folds).</p>
+
+<p>James Hague writes about how functional programming ideals can make <a href="https://prog21.dadgum.com/41.html">simple
+problems hard</a>.</p>
+
+<blockquote>
+  <p>Given a block of binary data, count the frequency of the bytes within it.</p>
+</blockquote>
+
+<p>He points out that it’s tricky to find an efficient implementation of this
+problem that doesn’t involve destructive updates, and questions whether
+destructive updates are necessarily bad:</p>
+
+<blockquote>
+  <p>If a local array is updated inside of an OCaml function, then the result
+copied to a non-mutable array at the end… it looks exactly the same as the
+purely functional version from the caller’s point of view.</p>
+</blockquote>
+
+<p>This is a perfect example of choosing power in the small and properties at
+large.</p>
+
+
+  </div>
+
+  
+
+</article>
+<hr>
+
+<style lang="css">
+.pager {
+    text-align: center;
+    list-style: none;
+    line-height: 1.42857143;
+    margin-left: 0px;
+}
+.pager li > a {
+    font-size: 14px;
+    padding: 15px 25px;
+    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    text-transform: uppercase;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background-color: white;
+    border-radius: 0;
+    display: inline-block;
+    border: 1px solid #ddd;
+    color: #404040;
+    text-decoration: none;
+    box-sizing: border-box; /* might want this above as well; was on * */
+}
+.pager li > a:hover, .pager li > a:focus {
+    color: white;
+    background-color: #0085a1;
+    border: 1px solid #0085a1;
+}
+.pager .previous > a {
+    float: left;
+}
+.pager .next > a {
+    float: right;
+}
+table {
+    border-collapse: collapse;
+    border: 1px solid #dedede;
+}
+table th {
+    background-color: #777;
+    color: #fff;
+    padding: 8px;
+}
+table td {
+    padding: 8px;
+    vertical-align: top;
+    border-top: 1px solid #ddd;
+}
+table tr:nth-of-type(2n+1) {
+    background-color: #f9f9f9;
+}
+</style>
+<ul class="pager">
+    
+    <li class="previous">
+        <a href="/2021/09/22/composition-is-hard/" data-toggle="tooltip"
+            data-placement="top" title="An example of why software composition is hard">&larr; Previous Post</a>
+    </li>
+    
+    
+</ul>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+
+  <div class="wrapper">
+
+    <p>
+      
+
+&copy; Joshua "<a href="https://github.com/sciolizer">sciolizer</a>" Ball - Powered by <a href="https://jekyllrb.com">Jekyll</a> &amp; <a href="https://github.com/yous/whiteglass">whiteglass</a> - Subscribe via <a href="http://sciolizer.com/feed.xml">RSS</a>
+
+    </p>
+
+  </div>
+
+</footer>
+
+
+  </body>
+
+</html>

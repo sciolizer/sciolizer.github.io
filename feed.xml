@@ -5,7 +5,7 @@
   
   <link href="http://sciolizer.com/feed.xml" rel="self" type="application/atom+xml" />
   <link href="http://sciolizer.com/" rel="alternate" type="text/html" />
-  <updated>2022-02-14T12:10:00-08:00</updated>
+  <updated>2022-02-16T15:07:29-08:00</updated>
   <id>http://sciolizer.com//</id>
 
   
@@ -18,6 +18,106 @@
 
   
 
+  
+  
+    <entry>
+      
+      <title type="html">Power in the small, properties at large</title>
+      
+      
+      <link href="http://sciolizer.com/2022/02/16/power-in-the-small-properties-at-large/" rel="alternate" type="text/html" title="Power in the small, properties at large" />
+      
+      <published>2022-02-16T10:00:00-08:00</published>
+      <updated>2022-02-16T10:00:00-08:00</updated>
+      <id>http://sciolizer.com/2022/02/16/power-in-the-small-properties-at-large</id>
+      <content type="html" xml:base="http://sciolizer.com/2022/02/16/power-in-the-small-properties-at-large/">&lt;p&gt;The fight between imperative and functional programming is a special case of a
+larger tradeoff, which Ted Kaminski describes as &lt;a href=&quot;https://www.tedinski.com/2018/01/30/the-one-ring-problem-abstraction-and-power.html&quot;&gt;power vs properties&lt;/a&gt;.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;You cannot create an abstraction without saying two things: what it is, and
+what it is not… You cannot make an abstraction more &lt;strong&gt;powerful&lt;/strong&gt; without
+sacrificing some &lt;strong&gt;properties&lt;/strong&gt; that you used to know about it. Necessarily.
+You
+cannot require a new &lt;strong&gt;property&lt;/strong&gt; be true about an abstraction without
+sacrificing
+some of its &lt;strong&gt;power&lt;/strong&gt; and flexibility. Always.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;Mutable data structures are strictly more &lt;strong&gt;powerful&lt;/strong&gt; than immutable data
+structures (code that works on immutable data structures will also work on
+mutable data structures), and mutability often offers a way to make an algorithm
+more efficient. But of course, they have lost the valuable &lt;strong&gt;property&lt;/strong&gt; of
+immutability: you have to be careful which functions you let touch your mutable
+data structure, lest your program become incorrect because of an unexpected
+mutation.&lt;/p&gt;
+
+&lt;p&gt;The algorithm for determining whether a program is correct is
+divide-and-conquer: a program is correct if its pieces are correct and its
+pieces are glued together correctly. A piece is correct if its post-conditions
+are true when its pre-conditions are true. The glue is correct if all
+pre-conditions are true. Pre-conditions and post-conditions are of course
+properties, and so properties are the means by which we determine, &lt;em&gt;at large&lt;/em&gt;,
+whether our programs are correct.&lt;/p&gt;
+
+&lt;p&gt;But properties get in our way &lt;em&gt;in the small&lt;/em&gt;. The for-loop is more powerful than
+left-fold. Any left-fold can easily be turned into a for-loop, but the converse
+is not true. The left-fold has some nice properties: the number of iterations is
+always the size of the traversed data structure, for example. But if, upon
+revisiting a left-fold, I realize I need early termination in some cases, then
+I will wish I had written the left-fold as a for-loop. The properties of a
+left-fold were never that valuable to me in the first place: if the whole
+for-loop
+is just a few lines long, then I can &lt;strong&gt;see&lt;/strong&gt; that it is correct.&lt;/p&gt;
+
+&lt;p&gt;This suggests a guideline to follow in choosing between power and properties.
+When my code is small, I want powerful abstractions (e.g. mutable data
+structures) and powerful compositions (e.g. for-loops). When my code is large,
+and especially when it spans multiple files, I want abstractions with clear
+properties (e.g. immutable data structures) and compositions with clear
+properties (e.g. left folds).&lt;/p&gt;
+
+&lt;p&gt;James Hague writes about how functional programming ideals can make &lt;a href=&quot;https://prog21.dadgum.com/41.html&quot;&gt;simple
+problems hard&lt;/a&gt;.&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;Given a block of binary data, count the frequency of the bytes within it.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;He points out that it’s tricky to find an efficient implementation of this
+problem that doesn’t involve destructive updates, and questions whether
+destructive updates are necessarily bad:&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;If a local array is updated inside of an OCaml function, then the result
+copied to a non-mutable array at the end… it looks exactly the same as the
+purely functional version from the caller’s point of view.&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;This is a perfect example of choosing power in the small and properties at
+large.&lt;/p&gt;</content>
+
+      
+      
+      
+      
+      
+
+      
+
+      
+        <category term="composition" />
+      
+
+      
+
+      
+        <summary type="html">The fight between imperative and functional programming is a special case of a larger tradeoff, which Ted Kaminski describes as power vs properties.</summary>
+      
+
+      
+      
+    </entry>
+  
   
   
     <entry>
