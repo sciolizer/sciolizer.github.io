@@ -201,7 +201,7 @@ our examples from above. So `solve` is usually in NP, and no worse than NP-compl
 our predicate is in P.
 
 It's a hard problem. Were you surprised? Or did you get suspicious when the programmers of the
-future started exemplifying godlike powers?<sup><a href="#godlike" name="1">1</a></sup>
+future started exemplifying godlike powers?<sup><a href="#godlike" name="godlike-use">1</a></sup>
 
 Thankfully, a lot of work has been put into solving hard problems.
 
@@ -406,7 +406,7 @@ letting me know these people exist.
 
 -----------------------
 
-<sup><a href="#1" name="godlike">1</a></sup>: Even many computer scientists do not seem to appreciate how different the world would be if we
+<sup><a href="#godlike-use" name="godlike">1</a></sup>: Even many computer scientists do not seem to appreciate how different the world would be if we
 could solve NP-complete problems efficiently. **I have heard it said, with a straight face, that a
 proof of P = NP would be important because it would let airlines schedule their flights better, or
 shipping companies pack more boxes in their trucks!** One person who did understand was Gödel. In
